@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "psygine"
+version = "0.0.1"
+authors = [
+  { name="swolf", email="swolfforever@gmail.com" },
+]
+maintainers = [
+  { name="swolf", email="swolfforever@gmail.com" },
+]
+description = "The best engine for cyberpsychos"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "joblib",
+  "pooch",
+  "numpy",
+  "scipy",
+  "pandas",
+  "scikit-learn",
+  "mne",
+  "mat73",
+  "py7zr"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/mrswolf/psygine"
+"Bug Tracker" = "https://github.com/mrswolf/psygine/issues"
