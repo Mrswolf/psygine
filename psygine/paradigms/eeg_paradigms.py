@@ -154,7 +154,7 @@ class BaseEegParadigm(BaseParadigm):
             meta = pd.concat(
                 [meta[event] for event in events], axis=0, ignore_index=True)
         elapsed_time = time.time() - st
-        print('Loading time:', time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
+        print('Loading time: {:.4f}s'.format(elapsed_time))
         return X, y, meta
 
 class MiEegParadigm(BaseEegParadigm):
