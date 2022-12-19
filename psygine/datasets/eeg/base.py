@@ -25,6 +25,14 @@ class EegDataset(BaseDataset):
         return list(self._dataset_events.keys())
 
     @property
+    def intervals(self):
+        return [self.get_event_interval(event) for event in self.events]
+    
+    @property
+    def event_ids(self):
+        return [self.get_event_id(event) for event in self.events]
+
+    @property
     def channels(self):
         return self._dataset_channels
 
