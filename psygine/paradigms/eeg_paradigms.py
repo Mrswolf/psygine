@@ -6,11 +6,13 @@
 """EEG Paradigm Design.
 """
 import time
+from collections import OrderedDict
 import numpy as np
 import pandas as pd
 import mne
 from sklearn.preprocessing import LabelEncoder
 from .base import BaseParadigm
+from .utils.hooks import RemovableHandle
 
 class BaseEegParadigm(BaseParadigm):
     def __init__(self, uid, channels=None, events=None, intervals=None, srate=None):
@@ -21,6 +23,9 @@ class BaseEegParadigm(BaseParadigm):
         self._paradigm_events = events
         self._paradigm_intervals = intervals
         self._paradigm_srate = srate
+        self._raw_hooks = OrderedDict()
+        self._epoch_hooks = OrderedDict()
+        self._array_hooks = OrderedDict()
 
     def _is_valid_args(self, dataset, channels, events, intervals, srate):
         if channels is not None:
@@ -84,6 +89,15 @@ class BaseEegParadigm(BaseParadigm):
         sub_X, sub_y, sub_meta = {}, {}, {}
         for session_id, runs in rawdata.items():
             for run_id, raw in runs.items():
+
+                if self._raw_hooks:
+                    for hook in (*self._raw_hooks.values(),):
+                        result = hook(self, raw)
+                        if result is not None:
+                            if not isinstance(result, tuple):
+                                result = (result,)
+                            raw, = result
+        
                 channel_picks = mne.pick_channels(
                     dataset.channels, channels,
                     ordered=True)
@@ -113,9 +127,18 @@ class BaseEegParadigm(BaseParadigm):
                     except ValueError:
                         # skip the empty event
                         continue
-                        
+                    
+                    if self._epoch_hooks:
+                        for hook in (*self._epoch_hooks.values(),):
+                            result = hook(self, epoch)
+                            if result is not None:
+                                if not isinstance(result, tuple):
+                                    result = (result,)
+                                epoch, = result
+
                     if srate < dataset.srate:
                         epoch = epoch.resample(srate, verbose=False)
+
                     X = epoch[event].get_data() * 1e6 # default micro-volt
                     y = le.transform([event] * len(X))
                     meta = pd.DataFrame(
@@ -127,6 +150,15 @@ class BaseEegParadigm(BaseParadigm):
                             "event": [event]*len(X),
                             "dataset": [dataset.uid]*len(X)
                         })
+
+                    if self._array_hooks:
+                        for hook in (*self._array_hooks.values(),):
+                            result = hook(self, X, y, meta)
+                            if result is not None:
+                                if not isinstance(result, tuple):
+                                    result = (result,)
+                                X, y, meta = result
+
                     # gathering data
                     sub_X[event] = np.concatenate((sub_X[event], X), axis=0) if event in sub_X else X
                     sub_y[event] = np.concatenate((sub_y[event], y), axis=0) if event in sub_y else y
@@ -149,13 +181,31 @@ class BaseEegParadigm(BaseParadigm):
             meta[event] = pd.concat(
                 [meta_list[i][event] for i in range(len(subject_ids)) if event in meta_list[i]], axis=0, ignore_index=True)
         if concat:
-            X = np.concatenate([X[event] for event in events], axis=0)
-            y = np.concatenate([y[event] for event in events], axis=0)
-            meta = pd.concat(
-                [meta[event] for event in events], axis=0, ignore_index=True)
+            try:
+                X = np.concatenate([X[event] for event in events], axis=0)
+                y = np.concatenate([y[event] for event in events], axis=0)
+                meta = pd.concat(
+                    [meta[event] for event in events], axis=0, ignore_index=True)
+            except ValueError:
+                print("All the input array dimensions for the concatenation axis must match exactly.\nSkip concat step.")
         elapsed_time = time.time() - st
         print('Loading time: {:.4f}s'.format(elapsed_time))
         return X, y, meta
+
+    def register_raw_hook(self, hook):
+        handle = RemovableHandle(self._raw_hooks)
+        self._raw_hooks[handle.id] = hook
+        return handle
+    
+    def register_epoch_hook(self, hook):
+        handle = RemovableHandle(self._epoch_hooks)
+        self._epoch_hooks[handle.id] = hook
+        return handle
+    
+    def register_array_hook(self, hook):
+        handle = RemovableHandle(self._array_hooks)
+        self._array_hooks[handle.id] = hook
+        return handle
 
 class MiEegParadigm(BaseEegParadigm):
     def __init__(self, channels=None, events=None, intervals=None, srate=None):
