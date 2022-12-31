@@ -57,7 +57,7 @@ class AlexMI(MiEegDataset):
             runs = dict()
             for irun, run_file in enumerate(run_dests):
                 raw = Raw(run_file, preload=True, verbose=False)
-                raw = raw.rename_channels({ch_name: ch_name.upper() for ch_name in raw.info['ch_names']})
+                raw = raw.rename_channels({ch_name: ch_name.upper() for ch_name in raw.info['ch_names']}, verbose=False)
                 raw.set_montage(montage, verbose=False)
                 runs['run_{:d}'.format(irun)] = raw
             sess['session_{:d}'.format(isess)] = runs

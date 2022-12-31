@@ -123,7 +123,7 @@ class Wang2016(SsvepEegDataset):
         montage = make_standard_montage('standard_1005')
         montage.rename_channels({ch_name: ch_name.upper() for ch_name in montage.ch_names})
         # montage.ch_names = [ch_name.upper() for ch_name in montage.ch_names]
-        ch_names = [ch_name.upper() for ch_name in self._CHANNELS]
+        ch_names = [ch_name.upper() for ch_name in self.channels]
         ch_names.insert(32, 'M1')
         ch_names.insert(42, 'M2')
         ch_names.insert(59, 'CB1')
@@ -260,7 +260,7 @@ class Beta(SsvepEegDataset):
         montage = make_standard_montage('standard_1005')
         montage.rename_channels({ch_name: ch_name.upper() for ch_name in montage.ch_names})
         # montage.ch_names = [ch_name.upper() for ch_name in montage.ch_names]
-        ch_names = [ch_name.upper() for ch_name in self._CHANNELS]
+        ch_names = [ch_name.upper() for ch_name in self.channels]
         ch_names.insert(32, 'M1')
         ch_names.insert(42, 'M2')
         ch_names.insert(59, 'CB1')
@@ -368,7 +368,7 @@ class EldBeta(SsvepEegDataset):
         montage = make_standard_montage('standard_1005')
         montage.rename_channels({ch_name: ch_name.upper() for ch_name in montage.ch_names})
         # montage.ch_names = [ch_name.upper() for ch_name in montage.ch_names]
-        ch_names = [ch_name.upper() for ch_name in self._CHANNELS]
+        ch_names = [ch_name.upper() for ch_name in self.channels]
         ch_names.insert(32, 'M1')
         ch_names.insert(42, 'M2')
         ch_names.insert(59, 'CB1')

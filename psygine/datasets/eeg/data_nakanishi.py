@@ -76,15 +76,15 @@ class Nakanishi2015(SsvepEegDataset):
         buff = (data.shape[0], n_channels + 1, 50)
         data = np.concatenate([np.zeros(buff), data,
                                np.zeros(buff)], axis=2)
-        ch_names = self._CHANNELS + ['stim']
-        ch_types = ['eeg']*len(self._CHANNELS) + ['stim']
+        ch_names = self.channels + ['stim']
+        ch_types = ['eeg']*len(self.channels) + ['stim']
 
         info = create_info(
             ch_names=ch_names, ch_types=ch_types, sfreq=self.srate, verbose=False
         )
         raw = RawArray(data=np.concatenate(list(data), axis=1), info=info, verbose=False)
-        raw = raw.rename_channels({ch_name: ch_name.upper() for ch_name in raw.info['ch_names']})
-        raw.set_montage(montage)
+        raw = raw.rename_channels({ch_name: ch_name.upper() for ch_name in raw.info['ch_names']}, verbose=False)
+        raw.set_montage(montage, verbose=False)
 
         sess = {
             'session_0': {'run_0': raw}
