@@ -15,7 +15,7 @@ from .base import BaseParadigm
 from .utils.hooks import RemovableHandle
 
 class BaseEegParadigm(BaseParadigm):
-    def __init__(self, uid, channels=None, events=None, intervals=None, srate=None):
+    def __init__(self, uid, channels=None, events=None, intervals=None, srate=None, dataset_hooks=True):
         super().__init__(uid)
         if channels is not None:
             channels = [ch.upper() for ch in channels]
@@ -23,6 +23,7 @@ class BaseEegParadigm(BaseParadigm):
         self._paradigm_events = events
         self._paradigm_intervals = intervals
         self._paradigm_srate = srate
+        self._dataset_hooks = dataset_hooks
         self._raw_hooks = OrderedDict()
         self._epoch_hooks = OrderedDict()
         self._array_hooks = OrderedDict()
@@ -32,19 +33,20 @@ class BaseEegParadigm(BaseParadigm):
             for channel in channels:
                 if channel not in dataset.channels:
                     raise ValueError("{:s} is not an available channel in dataset {:s}.".format(channel, dataset.uid))
-                    return False
+
         if events is not None:
             for event in events:
                 if event not in dataset.events:
                     raise ValueError("{:s} is not an available event in dataset {:s}.".format(event, dataset.uid))
-                    return False
+
         if intervals is not None:
             if (1 != len(intervals) and len(events) != len(intervals)):
                 return False
+
             for interval in intervals:
                 if interval[0] >= interval[1]:
                     raise ValueError("Invalid interval:{}.".format(interval))
-                    return False
+
         if srate is not None:
             if not isinstance(srate, (int, float)):
                 return False
@@ -59,7 +61,7 @@ class BaseEegParadigm(BaseParadigm):
             dataset, self._paradigm_channels, self._paradigm_events, self._paradigm_intervals, self._paradigm_srate):
             return False
         return True
-    
+
     def _parse_args(self, dataset, channels, events, intervals, srate):
         # check srate
         if srate is None:
@@ -81,7 +83,7 @@ class BaseEegParadigm(BaseParadigm):
     def _get_single_subject_data(self, dataset, subject_id):
         channels, events, intervals, srate = self._parse_args(
             dataset, self._paradigm_channels, self._paradigm_events, self._paradigm_intervals, self._paradigm_srate)
-        
+
         le = LabelEncoder().fit(events)
 
         rawdata = dataset.get_rawdata(subject_ids=[subject_id])['subject_{:d}'.format(subject_id)]
@@ -97,7 +99,14 @@ class BaseEegParadigm(BaseParadigm):
                             if not isinstance(result, tuple):
                                 result = (result,)
                             raw, = result
-        
+                elif self._dataset_hooks:
+                    if hasattr(dataset, 'raw_hook'):
+                        result = dataset.raw_hook(self, raw)
+                        if result is not None:
+                            if not isinstance(result, tuple):
+                                result = (result,)
+                            raw, = result
+
                 channel_picks = mne.pick_channels(
                     dataset.channels, channels,
                     ordered=True)
@@ -135,6 +144,13 @@ class BaseEegParadigm(BaseParadigm):
                                 if not isinstance(result, tuple):
                                     result = (result,)
                                 epoch, = result
+                    elif self._dataset_hooks:
+                        if hasattr(dataset, 'epoch_hook'):
+                            result = dataset.epoch_hook(self, epoch)
+                            if result is not None:
+                                if not isinstance(result, tuple):
+                                    result = (result,)
+                                epoch, = result
 
                     if srate < dataset.srate:
                         epoch = epoch.resample(srate, verbose=False)
@@ -158,6 +174,13 @@ class BaseEegParadigm(BaseParadigm):
                                 if not isinstance(result, tuple):
                                     result = (result,)
                                 X, y, meta = result
+                    elif self._dataset_hooks:
+                        if hasattr(dataset, 'array_hook'):
+                            result = dataset.array_hook(self, X, y, meta)
+                            if result is not None:
+                                if not isinstance(result, tuple):
+                                    result = (result,)
+                                X, y, meta = result
 
                     # gathering data
                     sub_X[event] = np.concatenate((sub_X[event], X), axis=0) if event in sub_X else X
@@ -165,7 +188,7 @@ class BaseEegParadigm(BaseParadigm):
                     sub_meta[event] = pd.concat((sub_meta[event], meta), axis=0, ignore_index=True) if event in sub_meta else meta
         return sub_X, sub_y, sub_meta
 
-    def get_data(self, dataset, subject_ids=None, concat=False, n_jobs=None):
+    def get_data(self, dataset, subject_ids=None, n_jobs=None, concat=False):
         st = time.time()
         X_list, y_list, meta_list = super().get_data(dataset, subject_ids, n_jobs)
         _, events, _, _ = self._parse_args(
@@ -196,31 +219,33 @@ class BaseEegParadigm(BaseParadigm):
         handle = RemovableHandle(self._raw_hooks)
         self._raw_hooks[handle.id] = hook
         return handle
-    
+
     def register_epoch_hook(self, hook):
         handle = RemovableHandle(self._epoch_hooks)
         self._epoch_hooks[handle.id] = hook
         return handle
-    
+
     def register_array_hook(self, hook):
         handle = RemovableHandle(self._array_hooks)
         self._array_hooks[handle.id] = hook
         return handle
 
 class MiEegParadigm(BaseEegParadigm):
-    def __init__(self, channels=None, events=None, intervals=None, srate=None):
+    def __init__(self, channels=None, events=None, intervals=None, srate=None, dataset_hooks=True):
         super().__init__(
             'mi-eeg',
             channels=channels,
             events=events,
             intervals=intervals,
-            srate=srate)
+            srate=srate,
+            dataset_hooks=dataset_hooks)
 
 class SsvepEegParadigm(BaseEegParadigm):
-    def __init__(self, channels=None, events=None, intervals=None, srate=None):
+    def __init__(self, channels=None, events=None, intervals=None, srate=None, dataset_hooks=True):
         super().__init__(
             'ssvep-eeg',
             channels=channels,
             events=events,
             intervals=intervals,
-            srate=srate)
+            srate=srate,
+            dataset_hooks=dataset_hooks)
