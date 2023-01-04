@@ -14,7 +14,36 @@ from sklearn.preprocessing import LabelEncoder
 from .base import BaseParadigm
 from .utils.hooks import RemovableHandle
 
+__all__ = [
+    'BaseEegParadigm', 'MiEegParadigm', 'SsvepEegParadigm'
+]
+
 class BaseEegParadigm(BaseParadigm):
+    r"""Base EEG Paradigm.
+
+    Parameters
+    ----------
+    uid : str
+        The unique string id to identify the paradigm.
+    channels : list, optional
+        A list of selected channel names. If None, use all channels the dataset supported.
+    events : list, optional
+        A list of selected event names. If None, use all events the dataset supported.
+    intervals : list, optional
+        A list of event intervals corresponding to selected events.
+        e.g. [[-1, 1]] means epoching raw data from -1s to 1s for the first event.
+        If None, use default settings from the dataset.
+    srate : float or int, optional
+        Resampling rate. If None, use default sampling rate.
+    dataset_hooks : bool
+        Whether to use default hooks from the dataset, default True.
+        However, any user defined hook would override the dataset default hook.
+
+    Attributes
+    ----------
+    uid : str
+        The unique id for the current paradigm.
+    """
     def __init__(self, uid, channels=None, events=None, intervals=None, srate=None, dataset_hooks=True):
         super().__init__(uid)
         if channels is not None:
@@ -53,6 +82,18 @@ class BaseEegParadigm(BaseParadigm):
         return True
 
     def is_valid(self, dataset):
+        r"""check the validity of the EEG dataset.
+
+        Parameters
+        ----------
+        dataset : BaseEegDataset
+            An instance of BaseEegDataset.
+
+        Returns
+        -------
+        bool
+            Return True iff the dataset is valid, else False.
+        """
         # check paradigms
         if self.uid not in dataset.paradigms:
             return False
@@ -189,6 +230,31 @@ class BaseEegParadigm(BaseParadigm):
         return sub_X, sub_y, sub_meta
 
     def get_data(self, dataset, subject_ids=None, n_jobs=None, concat=False):
+        r"""Get data from multiple subjects.
+
+        Parameters
+        ----------
+        dataset : BaseEegDataset
+            An instance of BaseEegDataset.
+        subject_ids : list, optional
+            A list of queried subject ids. If None, use all subjects the dataset supported.
+        n_jobs : int, optional
+            The number of cores to use to load data, -1 for all cores.
+        concat : bool
+            Return concated data if True.
+
+        Returns
+        -------
+        X : dict or array_like
+            A dictionary of data, where keys are event names.
+            Return concated numpy array if concat is True.
+        y : dict or array_like
+            A dictionary of label, where keys are event names.
+            Return concated numpy array if concat is True.
+        meta : dict or dataframe
+            A dictionary of meta, where keys are event names.
+            Return concated pandas dataframe if concat is True.
+        """
         st = time.time()
         X_list, y_list, meta_list = super().get_data(dataset, subject_ids, n_jobs)
         _, events, _, _ = self._parse_args(
@@ -231,6 +297,29 @@ class BaseEegParadigm(BaseParadigm):
         return handle
 
 class MiEegParadigm(BaseEegParadigm):
+    r"""Base MI EEG Paradigm.
+
+    Parameters
+    ----------
+    channels : list, optional
+        A list of selected channel names. If None, use all channels the dataset supported.
+    events : list, optional
+        A list of selected event names. If None, use all events the dataset supported.
+    intervals : list, optional
+        A list of event intervals corresponding to selected events.
+        e.g. [[-1, 1]] means epoching raw data from -1s to 1s for the first event.
+        If None, use default settings from the dataset.
+    srate : float or int, optional
+        Resampling rate. If None, use default sampling rate.
+    dataset_hooks : bool
+        Whether to use default hooks from the dataset, default True.
+        However, any user defined hook would override the dataset default hook.
+
+    Attributes
+    ----------
+    uid : str
+        The unique id for the current paradigm.
+    """
     def __init__(self, channels=None, events=None, intervals=None, srate=None, dataset_hooks=True):
         super().__init__(
             'mi-eeg',
@@ -241,6 +330,29 @@ class MiEegParadigm(BaseEegParadigm):
             dataset_hooks=dataset_hooks)
 
 class SsvepEegParadigm(BaseEegParadigm):
+    r"""Base SSVEP EEG Paradigm.
+
+    Parameters
+    ----------
+    channels : list, optional
+        A list of selected channel names. If None, use all channels the dataset supported.
+    events : list, optional
+        A list of selected event names. If None, use all events the dataset supported.
+    intervals : list, optional
+        A list of event intervals corresponding to selected events.
+        e.g. [[-1, 1]] means epoching raw data from -1s to 1s for the first event.
+        If None, use default settings from the dataset.
+    srate : float or int, optional
+        Resampling rate. If None, use default sampling rate.
+    dataset_hooks : bool
+        Whether to use default hooks from the dataset, default True.
+        However, any user defined hook would override the dataset default hook.
+
+    Attributes
+    ----------
+    uid : str
+        The unique id for the current paradigm.
+    """
     def __init__(self, channels=None, events=None, intervals=None, srate=None, dataset_hooks=True):
         super().__init__(
             'ssvep-eeg',
