@@ -6,6 +6,10 @@
 """
 import numpy as np
 
+__all__ = [
+    'rref', 'cr'
+]
+
 def rref(A):
     r"""Reduced row echelon form.
 

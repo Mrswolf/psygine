@@ -10,6 +10,12 @@ from scipy.linalg import eigh
 from sklearn.covariance import oas, ledoit_wolf, fast_mcd, empirical_covariance
 from joblib import Parallel, delayed
 
+__all__ = [
+    'is_positive_definite', 'nearest_positive_definite',
+    'covariances',
+    'positive_definite_operator', 'sqrtm', 'invsqrtm', 'logm', 'expm', 'powm'
+]
+
 def is_positive_definite(A):
     r"""Determine if the input matrix is positive-definite.
 
@@ -229,7 +235,6 @@ def covariances(X, estimator='cov', n_jobs=None):
     est = _check_cov_est(estimator)
     covmats = parallel(
         delayed(est)(x) for x in X)
-
     covmats = np.reshape(covmats, (*shape[:-2], shape[-2], shape[-2]))
     return covmats
 
@@ -275,7 +280,6 @@ def positive_definite_operator(P, operator, n_jobs=None):
     shape = P.shape
     P = P.reshape((-1, *shape[-2:]))
     P_hat = Parallel(n_jobs=n_jobs)(delayed(_single_matrix_operator)(Ci, operator) for Ci in P)
-    P_hat = np.stack(P_hat)
     P_hat = np.reshape(P_hat, (*shape,))
     return P_hat
 

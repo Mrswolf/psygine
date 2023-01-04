@@ -7,6 +7,10 @@
 import numpy as np
 from scipy.integrate import quad
 
+__all__ = [
+    'sign_flip', 'optimal_svht',
+]
+
 def sign_flip(U, V, X):
     r"""Flip signs of SVD.
 
