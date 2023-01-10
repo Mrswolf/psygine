@@ -290,6 +290,8 @@ def sqrtm(P, n_jobs=None):
     ----------
     P : (..., n, n) array_like
         Positive-definite matrices.
+    n_jobs: int, optional
+        The number of cores to do the computation, default None.
 
     Returns
     -------
@@ -363,6 +365,8 @@ def expm(P, n_jobs=None):
     ----------
     P : (..., n, n) array_like
         Positive-definite matrices.
+    n_jobs: int, optional
+        The number of cores to do the computation, default None.
 
     Returns
     -------
@@ -389,6 +393,8 @@ def powm(P, alpha, n_jobs=None):
         Positive-definite matrices.
     alpha : float
         Exponent.
+    n_jobs: int, optional
+        The number of cores to do the computation, default None.
 
     Returns
     -------
