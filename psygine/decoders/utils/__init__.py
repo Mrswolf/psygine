@@ -4,6 +4,7 @@
 # License: MIT License
 """Basic utils.
 """
+from .model_selection import *
 from .covariance import *
 from .svd import *
 from .fourier import *
