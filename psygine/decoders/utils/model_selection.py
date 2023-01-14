@@ -101,8 +101,8 @@ class EnhancedStratifiedKFold(StratifiedKFold):
         """
         for train, test in super().split(X, y, groups=groups):
             if self.validate_set:
-                train_ind, validate_ind = next(self.validate_spliter.split(X[train], y[train], groups=groups))
-                yield train[train_ind], train[validate_ind], test
+                train_idx, validate_idx = next(self.validate_spliter.split(X[train], y[train], groups=groups))
+                yield train[train_idx], train[validate_idx], test
             else:
                 yield train, test
 
@@ -160,20 +160,20 @@ class EnhancedLeaveOneGroupOut(LeaveOneGroupOut):
                 n_repeat = np.random.randint(1, n_splits)
                 validate_iter = self.validate_spliter.split(X[train], y[train], groups[train])
                 for _ in range(n_repeat):
-                    train_ind, validate_ind = next(validate_iter)
-                yield train[train_ind], train[validate_ind], test
+                    train_idx, validate_idx = next(validate_iter)
+                yield train[train_idx], train[validate_idx], test
             else:
                 yield train, test
 
     def _generate_sequential_groups(self, y):
         labels = np.unique(y)
         groups = np.zeros((len(y)))
-        inds = [y==label for label in labels]
-        n_labels = [np.sum(ind) for ind in inds]
+        idxs = [y==label for label in labels]
+        n_labels = [np.sum(idx) for idx in idxs]
         if len(np.unique(n_labels)) > 1:
             warnings.warn("y is not balanced, the generated groups is not balanced as well.", RuntimeWarning)
-        for ind, n_label in zip(inds, n_labels):
-            groups[ind] = np.arange(n_label)
+        for idx, n_label in zip(idxs, n_labels):
+            groups[idx] = np.arange(n_label)
         return groups
 
 class EnhancedStratifiedShuffleSplit(StratifiedShuffleSplit):
@@ -263,7 +263,7 @@ class EnhancedStratifiedShuffleSplit(StratifiedShuffleSplit):
         """
         for train, test in super().split(X, y, groups=groups):
             if self.validate_set:
-                train_ind, validate_ind = next(self.validate_spliter.split(X[train], y[train], groups=groups))
-                yield train[train_ind], train[validate_ind], test
+                train_idx, validate_idx = next(self.validate_spliter.split(X[train], y[train], groups=groups))
+                yield train[train_idx], train[validate_idx], test
             else:
                 yield train, test
