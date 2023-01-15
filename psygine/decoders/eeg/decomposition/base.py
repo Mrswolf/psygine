@@ -154,3 +154,43 @@ class FilterBank(BaseEstimator, TransformerMixin):
             features = np.stack(features, axis=-1)
         return features
 
+def generate_ssvep_reference(
+    freqs, srate, T,
+    phases=None, n_harmonics=1):
+    r"""Generate SSVEP reference signals.
+
+    Parameters
+    ----------
+    freqs : (n_freqs,) array_like
+        The stimulus frequencies.
+    srate : float or int
+        The sampling rate of the monitor.
+    T : float
+        The time for stimulus in seconds.
+    phases : (n_freqs,) array_like, optional
+        The stimulus phases, default 0.
+    n_harmonics : int, default 1
+        The number of harmonics.
+
+    Returns
+    -------
+    Yf : (n_freqs, 2*n_harmonics, int(T*srate)) array_like
+        Reference signals
+    """
+    if isinstance(freqs, int) or isinstance(freqs, float):
+        freqs = [freqs] 
+    freqs = np.array(freqs)[:, np.newaxis]
+    if phases is None:
+        phases = 0
+    if isinstance(phases, int) or isinstance(phases, float):
+        phases = [phases] 
+    phases = np.array(phases)[:, np.newaxis]
+    t = np.linspace(0, T, int(T*srate))
+
+    Yf = []
+    for i in range(n_harmonics):
+        Yf.append(np.stack([
+            np.sin(2*np.pi*(i+1)*freqs*t + np.pi*phases),
+            np.cos(2*np.pi*(i+1)*freqs*t + np.pi*phases)], axis=1))
+    Yf = np.concatenate(Yf, axis=1)
+    return Yf
