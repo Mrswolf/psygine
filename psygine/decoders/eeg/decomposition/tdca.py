@@ -53,10 +53,10 @@ def _aug_2(X, n_samples, l, P, training=True):
     """
     X = X.reshape((-1, *X.shape[-2:]))
     n_trials, n_channels, n_points = X.shape
-    if n_points < l+n_samples:
-        raise ValueError("the length of X should be larger than l+n_samples.")
     aug_X = np.zeros((n_trials, (l+1)*n_channels, n_samples))
     if training:
+        if n_points < l+n_samples:
+            raise ValueError("the length of X should be larger than l+n_samples.")
         for i in range(l+1):
             aug_X[:, i*n_channels:(i+1)*n_channels, :] = X[..., i:i+n_samples]
     else:

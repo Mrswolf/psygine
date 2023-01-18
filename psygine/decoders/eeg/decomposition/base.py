@@ -8,7 +8,7 @@ from sklearn.base import BaseEstimator, TransformerMixin, clone
 from joblib import Parallel, delayed
 
 __all__ = [
-    'pearsonr', 'generate_ssvep_filterbank', 'FilterBank'
+    'pearsonr', 'generate_ssvep_filterbank', 'FilterBank', 'generate_ssvep_reference'
 ]
 
 def pearsonr(X, Y=None):
