@@ -68,17 +68,17 @@ def dsp_kernel(X, y, cov_estimator='cov'):
     D, W = D[::-1], W[:,::-1]
     return D, W, M
 
-def dsp_feature(W, M, X, n_components=1):
+def dsp_feature(X, W, M, n_components=1):
     """DSP feature.
 
     Parameters
     ----------
+    X : (n_trials, n_channels, n_samples) array_like
+        EEG signal.
     W : (n_channels, n_channels) array_like
         Spatial filters.
     M: (n_channels, n_samples) array_like
         Template signal for all classes.
-    X : (n_trials, n_channels, n_samples) array_like
-        EEG signal.
     n_components : int, default 1
         The number of components.
 
@@ -143,7 +143,7 @@ class DSP(BaseEstimator, TransformerMixin, ClassifierMixin):
         self.W_ = W
         self.M_ = M
         self.templates_ = np.stack([
-            np.mean(dsp_feature(W, M, X[y==label], n_components=W.shape[1]), axis=0) for label in self.classes_], axis=0)
+            np.mean(dsp_feature(X[y==label], W, M, n_components=W.shape[1]), axis=0) for label in self.classes_], axis=0)
         return self
 
     def _pearson_transform(self, X, T):
@@ -172,7 +172,7 @@ class DSP(BaseEstimator, TransformerMixin, ClassifierMixin):
         X = np.reshape(X, (-1, *X.shape[-2:]))
         X = X - np.mean(X, axis=-1, keepdims=True)
 
-        features = dsp_feature(self.W_, self.M_, X, n_components=self.n_components)
+        features = dsp_feature(X, self.W_, self.M_, n_components=self.n_components)
 
         if self.transform_method == 'mean':
             return np.mean(features, axis=-1)

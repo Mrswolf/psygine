@@ -119,7 +119,7 @@ def tdca_kernel(
     D, W, M = dsp_kernel(aug_X, aug_Y, cov_estimator=cov_estimator)
 
     Mc = np.stack([
-            np.mean(dsp_feature(W, M, aug_X[aug_Y==label], n_components=W.shape[-1]), axis=0) for label in labels
+            np.mean(dsp_feature(aug_X[aug_Y==label], W, M, n_components=W.shape[-1]), axis=0) for label in labels
             ])
     return D, W, M, P, Mc
 
@@ -160,7 +160,7 @@ def tdca_feature(
     rhos = []
     for Xk, Pi in zip(Mc, P):
         a = dsp_feature(
-                W, M, _aug_2(X, n_samples, l, Pi, training=False), n_components=n_components)
+                _aug_2(X, n_samples, l, Pi, training=False), W, M, n_components=n_components)
         b = Xk[:n_components, :]
         a = np.reshape(a, (a.shape[0], -1))
         b = np.reshape(b, (1, -1))
