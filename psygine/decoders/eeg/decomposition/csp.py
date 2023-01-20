@@ -139,6 +139,10 @@ class CSP(BaseEstimator, TransformerMixin, ClassifierMixin):
         self.classifier = classifier
         self.classifier_ = None
 
+        if (self.classifier is not None
+            and not isinstance(self.classifier, ClassifierMixin)):
+            raise TypeError('classifier must be a ClassifierMixin object')
+
     def fit(self, X, y):
         r"""Fit to data.
 
@@ -239,6 +243,10 @@ class FBCSP(FilterBank, ClassifierMixin):
         self.classifier = classifier
         self.classifier_ = None
         self.n_jobs = n_jobs
+
+        if (self.classifier is not None
+            and not isinstance(self.classifier, ClassifierMixin)):
+            raise TypeError('classifier must be a ClassifierMixin object')
 
         super().__init__(
             CSP(
@@ -695,6 +703,10 @@ class MultiCSP(BaseEstimator, TransformerMixin, ClassifierMixin):
         self.classifier = classifier
         self.classifier_ = None
 
+        if (self.classifier is not None
+            and not isinstance(self.classifier, ClassifierMixin)):
+            raise TypeError('classifier must be a ClassifierMixin object')
+
     def fit(self, X, y):
         r"""Fit to data.
 
@@ -801,6 +813,10 @@ class FBMultiCSP(FilterBank, ClassifierMixin):
         self.classifier_ = None
         self.n_jobs = n_jobs
 
+        if (self.classifier is not None
+            and not isinstance(self.classifier, ClassifierMixin)):
+            raise TypeError('classifier must be a ClassifierMixin object')
+            
         super().__init__(
             MultiCSP(
                 n_components=n_components,
