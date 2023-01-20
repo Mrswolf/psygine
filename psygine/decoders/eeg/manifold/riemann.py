@@ -15,7 +15,7 @@ from psygine.decoders.utils import covariances, sqrtm, invsqrtm, logm, expm, pow
 __all__ = [
     'logmap', 'expmap', 'geodesic', 'distance_riemann', 'mean_riemann', 'vectorize', 'unvectorize',
     'tangent_space', 'untangent_space', 'mdrm_kernel',
-    'MDRM', 'FGDA', 'FgMDRM', 'TSClassifier', 'Alignment', 'RecursiveAlignment'
+    'MDRM', 'FGDA', 'FgMDRM', 'TSClassifier', 'Align', 'AdaAlign'
 ]
 
 def logmap(Pi, P, n_jobs=None):
@@ -443,7 +443,7 @@ class TSClassifier(BaseEstimator, TransformerMixin, ClassifierMixin):
         else:
             raise NotImplementedError("No classifier was provided to support predict function.")
 
-class Alignment(BaseEstimator, TransformerMixin):
+class Align(BaseEstimator, TransformerMixin):
     def __init__(self, cov_estimator='cov', align_method='euclid', n_jobs=None):
         self.cov_estimator = cov_estimator
         self.align_method = align_method
@@ -473,7 +473,7 @@ class Alignment(BaseEstimator, TransformerMixin):
         C = mean_riemann(Cs, n_jobs=self.n_jobs)
         return invsqrtm(C)
 
-class RecursiveAlignment(BaseEstimator, TransformerMixin):
+class AdaAlign(BaseEstimator, TransformerMixin):
     def __init__(self, cov_estimator='cov', align_method='euclid'):
         self.cov_estimator = cov_estimator
         self.align_method = align_method
