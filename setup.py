@@ -12,7 +12,7 @@ setuptools.setup(
     description="The best engine for cyberpsychos",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    packages=setuptools.find_packages("psygine"),
+    packages=setuptools.find_packages(),
     install_requires=[],
     classifiers=[
         "Programming Language :: Python :: 3",
