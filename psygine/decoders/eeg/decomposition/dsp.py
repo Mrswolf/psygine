@@ -4,7 +4,6 @@
 # License: MIT License
 """DSP-related Methods.
 """
-from functools import partial
 import numpy as np
 from scipy.linalg import eigh
 from psygine.decoders.utils import covariances
