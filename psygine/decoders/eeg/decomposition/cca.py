@@ -7,7 +7,7 @@ import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin, ClassifierMixin, clone
 from sklearn.cross_decomposition import CCA
 from joblib import Parallel, delayed
-from .base import pearsonr
+from .base import pearsonr, FilterBank
 
 def cca_kernel(X, Yf, n_components=1):
     r"""Naive CCA kernel.
@@ -74,6 +74,100 @@ class SCCA(BaseEstimator, TransformerMixin, ClassifierMixin):
         labels = np.argmax(rhos, axis=-1)
         return labels
 
+class FBSCCA(FilterBank, ClassifierMixin):
+    r"""Filterbank SCCA.
+
+    Parameters
+    ----------
+    filterbank : list
+        List of filter coefficients in sos form.
+    Yf : (n_classes, 2*n_harmonics, n_samples) array_like
+        Reference signals.
+    n_components : int, default 1
+        The number of components.
+    filter_weights : array_like, optional
+        Filter weights for each sub-band.
+        If None, all sub-bands have the same weight 1.
+    n_jobs : int, optional
+        The number of CPUs to use to do the computation.
+    """
+    def __init__(self,
+        filterbank,
+        Yf,
+        n_components=1,
+        filter_weights=None,
+        n_jobs=None):
+        self.filterbank = filterbank
+        self.Yf = Yf
+        self.n_components = n_components
+        self.filter_weights = filter_weights
+        self.n_jobs = n_jobs
+
+        if self.Yf is None:
+            raise ValueError("The reference signals Yf should be provided.")
+
+        if (self.filter_weights is not None
+            and len(self.filter_weights) != len(filterbank)):
+            raise ValueError("Filter weights and filterbank should be the same length.")
+
+        super().__init__(
+            SCCA(Yf, n_components=n_components, n_jobs=n_jobs),
+            filterbank,
+            concat=False,
+            n_jobs=n_jobs)
+
+    def fit(self, X, y=None):
+        r"""Fit to data.
+
+        Parameters
+        ----------
+        X : (n_trials, n_channels, n_samples) array_like
+            EEG signal.
+        y : (n_trials,) array_like
+            Labels, not used here.
+        """
+        super().fit(X, y, axis=-1)
+        return self
+
+    def transform(self, X):
+        r"""Transform data.
+
+        Parameters
+        ----------
+        X : (n_trials, n_channels, n_samples) array_like
+            EEG signal.
+
+        Returns
+        -------
+        rhos : (n_trials, n_classes) array_like
+            Combined DSP correlation features.
+        """
+        features = super().transform(X, axis=-1)
+        if self.filter_weights is None:
+            filter_weights = np.ones(len(self.filterbank))
+        else:
+            filter_weights = self.filter_weights
+        features  = np.square(features) * filter_weights
+        features = np.sum(features, axis=-1)
+        return features
+
+    def predict(self, X):
+        r"""Predict data.
+
+        Parameters
+        ----------
+        X : (n_trials, n_channels, n_samples) array_like
+            EEG signal.
+
+        Returns
+        -------
+        labels : (n_trials,) array_like
+            Class labels.
+        """
+        features = self.transform(X)
+        labels = np.argmax(features, axis=-1)
+        return labels
+
 def _ecca_feature(X, T, Yf, n_components=1):
     rhos = []
     # 14a, 14d
@@ -136,4 +230,99 @@ class ECCA(BaseEstimator, TransformerMixin, ClassifierMixin):
     def predict(self, X):
         rhos = self.transform(X)
         labels = self.classes_[np.argmax(rhos, axis=-1)]
+        return labels
+
+class FBECCA(FilterBank, ClassifierMixin):
+    r"""Filterbank ECCA.
+
+    Parameters
+    ----------
+    filterbank : list
+        List of filter coefficients in sos form.
+    Yf : (n_classes, 2*n_harmonics, n_samples) array_like
+        Reference signals.
+    n_components : int, default 1
+        The number of components.
+    filter_weights : array_like, optional
+        Filter weights for each sub-band.
+        If None, all sub-bands have the same weight 1.
+    n_jobs : int, optional
+        The number of CPUs to use to do the computation.
+    """
+    def __init__(self,
+        filterbank,
+        Yf,
+        n_components=1,
+        filter_weights=None,
+        n_jobs=None):
+        self.filterbank = filterbank
+        self.Yf = Yf
+        self.n_components = n_components
+        self.filter_weights = filter_weights
+        self.n_jobs = n_jobs
+
+        if self.Yf is None:
+            raise ValueError("The reference signals Yf should be provided.")
+
+        if (self.filter_weights is not None
+            and len(self.filter_weights) != len(filterbank)):
+            raise ValueError("Filter weights and filterbank should be the same length.")
+
+        super().__init__(
+            ECCA(Yf, n_components=n_components, n_jobs=n_jobs),
+            filterbank,
+            concat=False,
+            n_jobs=n_jobs)
+
+    def fit(self, X, y):
+        r"""Fit to data.
+
+        Parameters
+        ----------
+        X : (n_trials, n_channels, n_samples) array_like
+            EEG signal.
+        y : (n_trials,) array_like
+            Labels, not used here.
+        """
+        self.classes_ = np.unique(y)
+        super().fit(X, y, axis=-1)
+        return self
+
+    def transform(self, X):
+        r"""Transform data.
+
+        Parameters
+        ----------
+        X : (n_trials, n_channels, n_samples) array_like
+            EEG signal.
+
+        Returns
+        -------
+        rhos : (n_trials, n_classes) array_like
+            Combined DSP correlation features.
+        """
+        features = super().transform(X, axis=-1)
+        if self.filter_weights is None:
+            filter_weights = np.ones(len(self.filterbank))
+        else:
+            filter_weights = self.filter_weights
+        features  = np.square(features) * filter_weights
+        features = np.sum(features, axis=-1)
+        return features
+
+    def predict(self, X):
+        r"""Predict data.
+
+        Parameters
+        ----------
+        X : (n_trials, n_channels, n_samples) array_like
+            EEG signal.
+
+        Returns
+        -------
+        labels : (n_trials,) array_like
+            Class labels.
+        """
+        features = self.transform(X)
+        labels = self.classes_[np.argmax(features, axis=-1)]
         return labels
