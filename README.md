@@ -51,7 +51,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 ## Contact
 
-swolf - [@your_twitter](https://twitter.com/your_username) - swolfforever@gmail.com
+swolf - [myblog](https://mrswolf.github.io) - swolfforever@gmail.com
 
 ## Acknowledgments
 
