@@ -27,6 +27,7 @@ def pearsonr(X, Y=None):
     r : (n_samples,) array_like
         Pearson correlation coefficients.
     """
+    eps = np.finfo(X.dtype).eps
     if Y is None:
         Y = X
     X = np.reshape(X, (-1, X.shape[-1]))
@@ -40,8 +41,8 @@ def pearsonr(X, Y=None):
     normx = np.linalg.norm(X, axis=-1, keepdims=True)
     normy = np.linalg.norm(Y, axis=-1, keepdims=True)
 
-    X = X / normx
-    Y = Y / normy
+    X = X / (normx+eps)
+    Y = Y / (normy+eps)
 
     r = np.sum(X*Y, axis=-1)
     return r

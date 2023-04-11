@@ -9,6 +9,10 @@ from sklearn.cross_decomposition import CCA
 from joblib import Parallel, delayed
 from .base import pearsonr, FilterBank
 
+__all__ = [
+    'cca_kernel', 'cca_feature', 'SCCA', 'FBSCCA', 'ecca_feature', 'ECCA', 'FBECCA'
+]
+
 def cca_kernel(X, Yf, n_components=1):
     r"""Naive CCA kernel.
 

@@ -26,6 +26,7 @@ dependencies = [
   "scipy",
   "pandas",
   "scikit-learn",
+  "scikit-image",
   "mne",
   "mat73",
   "py7zr"
