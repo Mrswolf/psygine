@@ -158,7 +158,8 @@ class FBSCCA(FilterBank, ClassifierMixin):
             filter_weights = np.ones(len(self.filterbank))
         else:
             filter_weights = self.filter_weights
-        features  = np.square(features) * filter_weights
+        # features  = np.square(features) * filter_weights
+        features = features * filter_weights
         features = np.sum(features, axis=-1)
         return features
 
@@ -323,7 +324,8 @@ class FBECCA(FilterBank, ClassifierMixin):
             filter_weights = np.ones(len(self.filterbank))
         else:
             filter_weights = self.filter_weights
-        features  = np.square(features) * filter_weights
+        # features  = np.square(features) * filter_weights
+        features = features * filter_weights
         features = np.sum(features, axis=-1)
         return features
 
