@@ -175,6 +175,8 @@ class TDCA(BaseEstimator, TransformerMixin, ClassifierMixin):
     ----------
     l : int
         The number of delay points.
+    Yf : (n_freqs, n_channels, n_samples) array_like
+        Reference signals. Note the order of the first dimension should match the order of classes (in ascending order) and n_freqs == n_classes.
     n_components : int, default 1
         The number of components.
     cov_estimator : str, default 'cov'
@@ -190,13 +192,15 @@ class TDCA(BaseEstimator, TransformerMixin, ClassifierMixin):
     """
     def __init__(self,
             l,
+            Yf,
             n_components=1,
             cov_estimator='cov'):
         self.l = l
+        self.Yf = Yf
         self.n_components = n_components
         self.cov_estimator = cov_estimator
 
-    def fit(self, X, y, Yf=None):
+    def fit(self, X, y):
         r"""Fit to data.
 
         Parameters
@@ -205,14 +209,10 @@ class TDCA(BaseEstimator, TransformerMixin, ClassifierMixin):
             EEG signal with delay points.
         y : (n_trials,) array_like
             Labels.
-        Yf : (n_freqs, n_channels, n_samples) array_like
-            Reference signals. Note the order of the first dimension should match the order of classes (in ascending order) and n_freqs == n_classes.
         """
-        if Yf is None:
-            raise ValueError("Yf must be provided.")
         self.classes_ = np.unique(y)
         _, self.W_, self.M_, self.P_, self.Mc_ = tdca_kernel(
-            X, y, Yf, self.l, cov_estimator=self.cov_estimator)
+            X, y, self.Yf, self.l, cov_estimator=self.cov_estimator)
         return self
  
     def transform(self, X):
@@ -259,6 +259,8 @@ class FBTDCA(FilterBank, ClassifierMixin):
         List of filter coefficients in sos form.
     l : int
         The number of delay points.
+    Yf : (n_freqs, n_channels, n_samples) array_like
+        Reference signals. Note the order of the first dimension should match the order of classes (in ascending order) and n_freqs == n_classes.
     n_components : int, default 1
         The number of components.
     cov_estimator : str, default 'cov'
@@ -272,12 +274,14 @@ class FBTDCA(FilterBank, ClassifierMixin):
     def __init__(self,
         filterbank,
         l,
+        Yf,
         n_components=1,
         cov_estimator='cov',
         filter_weights=None,
         n_jobs=None):
         self.filterbank = filterbank
         self.l = l
+        self.Yf = Yf
         self.n_components = n_components
         self.cov_estimator = cov_estimator
         self.filter_weights = filter_weights
@@ -288,12 +292,12 @@ class FBTDCA(FilterBank, ClassifierMixin):
             raise ValueError("Filter weights and filterbank should be the same length.")
 
         super().__init__(
-            TDCA(l, n_components=n_components, cov_estimator=cov_estimator),
+            TDCA(l, Yf, n_components=n_components, cov_estimator=cov_estimator),
             filterbank,
             concat=False,
             n_jobs=n_jobs)
 
-    def fit(self, X, y, Yf=None):
+    def fit(self, X, y):
         r"""Fit to data.
 
         Parameters
@@ -302,11 +306,9 @@ class FBTDCA(FilterBank, ClassifierMixin):
             EEG signal with delay points.
         y : (n_trials,) array_like
             Labels.
-        Yf : (n_freqs, n_channels, n_samples) array_like
-            Reference signals. Note the order of the first dimension should match the order of classes (in ascending order) and n_freqs == n_classes.
         """
         self.classes_ = np.unique(y)
-        super().fit(X, y, axis=-1, Yf=Yf)
+        super().fit(X, y, axis=-1)
         return self
 
     def transform(self, X):

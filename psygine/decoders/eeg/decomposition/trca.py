@@ -275,8 +275,14 @@ class FBTRCA(FilterBank, ClassifierMixin):
             filter_weights = np.ones(len(self.filterbank))
         else:
             filter_weights = self.filter_weights
-        features  = np.square(features) * filter_weights
+
+        # bad performance for square
+        # features  = np.square(features) * filter_weights 
+        
+        # nakanishi's features
+        features = features * filter_weights
         features = np.sum(features, axis=-1)
+
         return features
 
     def predict(self, X):

@@ -39,22 +39,28 @@ def cca_kernel(X, Yf, n_components=1):
     return U, V
 
 def _cca_feature(X, Yf, n_components=1):
+    X = X - np.mean(X, axis=-1, keepdims=True)
+    Yf = Yf - np.mean(Yf, axis=-1, keepdims=True)
     U, V = cca_kernel(X, Yf, n_components=n_components)
     a = np.matmul(U.T, X)
     b = np.matmul(V.T, Yf)
     a, b = np.reshape(a, (-1)), np.reshape(b, (-1))
     r = pearsonr(a, b)
-    return r
+    return r[0]
 
 def cca_feature(X, Yf, n_components=1, n_jobs=None):
     X = np.reshape(X, (-1, *X.shape[-2:]))
     Yf = np.reshape(Yf, (-1, *Yf.shape[-2:]))
 
-    rhos = []
-    for yf in Yf:
-        rs = Parallel(n_jobs=n_jobs)(delayed(partial(_cca_feature, n_components=n_components))(x, yf) for x in X)
-        rhos.append(rs)
-    rhos = np.stack(rhos).T
+    # rhos = []
+    # for yf in Yf:
+    #     rs = Parallel(n_jobs=n_jobs)(delayed(partial(_cca_feature, n_components=n_components))(x, yf) for x in X)
+    #     rhos.append(rs)
+    # rhos = np.stack(rhos).T
+    
+    rhos = Parallel(n_jobs=n_jobs)(delayed(partial(_cca_feature, n_components=n_components))(x, yf) for x in X for yf in Yf)
+    rhos = np.reshape(rhos, (X.shape[0], Yf.shape[0]))
+
     return rhos
 
 class SCCA(BaseEstimator, TransformerMixin, ClassifierMixin):
@@ -65,7 +71,7 @@ class SCCA(BaseEstimator, TransformerMixin, ClassifierMixin):
         self.n_components = n_components
         self.n_jobs = n_jobs
 
-    def fit(self, X, y=None):
+    def fit(self, X=None, y=None):
         return self
 
     def transform(self, X):
@@ -120,17 +126,16 @@ class FBSCCA(FilterBank, ClassifierMixin):
             concat=False,
             n_jobs=n_jobs)
 
-    def fit(self, X, y=None):
+    def fit(self, X=None, y=None):
         r"""Fit to data.
 
         Parameters
         ----------
         X : (n_trials, n_channels, n_samples) array_like
-            EEG signal.
+            EEG signal, not used here.
         y : (n_trials,) array_like
             Labels, not used here.
         """
-        super().fit(X, y, axis=-1)
         return self
 
     def transform(self, X):
@@ -146,6 +151,8 @@ class FBSCCA(FilterBank, ClassifierMixin):
         rhos : (n_trials, n_classes) array_like
             Combined DSP correlation features.
         """
+        self.estimators_ = [
+            clone(self.base_estimator) for _ in range(len(self.filterbank))]
         features = super().transform(X, axis=-1)
         if self.filter_weights is None:
             filter_weights = np.ones(len(self.filterbank))
@@ -204,11 +211,15 @@ def ecca_feature(X, T, Yf, n_components=1, n_jobs=None):
     X = np.reshape(X, (-1, *X.shape[-2:]))
     Yf = np.reshape(Yf, (-1, *Yf.shape[-2:]))
     T = np.reshape(T, (-1, *T.shape[-2:]))
-    rhos = []
-    for t, yf in zip(T, Yf):
-        rs = Parallel(n_jobs=n_jobs)(delayed(partial(_ecca_feature, n_components=n_components))(x, t, yf) for x in X)
-        rhos.append(rs)
-    rhos = np.stack(rhos).T
+    # rhos = []
+    # for t, yf in zip(T, Yf):
+    #     rs = Parallel(n_jobs=n_jobs)(delayed(partial(_ecca_feature, n_components=n_components))(x, t, yf) for x in X)
+    #     rhos.append(rs)
+    # rhos = np.stack(rhos).T
+    
+    rhos = Parallel(n_jobs=n_jobs)(delayed(partial(_ecca_feature, n_components=n_components))(x, t, yf) for x in X for t, yf in zip(T, Yf))
+    rhos = np.reshape(rhos, (X.shape[0], Yf.shape[0]))
+    
     return rhos
 
 class ECCA(BaseEstimator, TransformerMixin, ClassifierMixin):
@@ -227,6 +238,8 @@ class ECCA(BaseEstimator, TransformerMixin, ClassifierMixin):
         return self
 
     def transform(self, X):
+        X = np.reshape(X, (-1, *X.shape[-2:]))
+        X = X - np.mean(X, axis=-1, keepdims=True)
         rhos = ecca_feature(
             X, self.T_, self.Yf, n_components=self.n_components, n_jobs=self.n_jobs)
         return rhos
