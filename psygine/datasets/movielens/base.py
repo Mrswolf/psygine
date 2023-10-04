@@ -3,7 +3,7 @@
 # Authors: Swolf <swolfforever@gmail.com>
 # Date: 2023/10/02
 # License: MIT License
-"""Base Text Dataset Design.
+"""Base MovieLens Dataset Design.
 """
 from abc import abstractmethod
 

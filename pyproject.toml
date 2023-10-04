@@ -30,7 +30,8 @@ dependencies = [
   "mne",
   "mat73",
   "py7zr",
-  "nibabel"
+  "nibabel",
+  "pillow"
 ]
 
 [project.urls]

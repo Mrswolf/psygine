@@ -4,6 +4,8 @@
 # Date: 2023/10/02
 # License: MIT License
 """MovieLens Datasets.
+
+See https://grouplens.org/datasets/movielens/
 """
 import os.path as op
 from pathlib import Path
