@@ -10,8 +10,15 @@ from joblib import Parallel, delayed
 from .base import pearsonr, FilterBank
 
 __all__ = [
-    'cca_kernel', 'cca_feature', 'SCCA', 'FBSCCA', 'ecca_feature', 'ECCA', 'FBECCA'
+    "cca_kernel",
+    "cca_feature",
+    "SCCA",
+    "FBSCCA",
+    "ecca_feature",
+    "ECCA",
+    "FBECCA",
 ]
+
 
 def cca_kernel(X, Yf, n_components=1):
     r"""Naive CCA kernel.
@@ -38,6 +45,7 @@ def cca_kernel(X, Yf, n_components=1):
     V = est.y_weights_
     return U, V
 
+
 def _cca_feature(X, Yf, n_components=1):
     X = X - np.mean(X, axis=-1, keepdims=True)
     Yf = Yf - np.mean(Yf, axis=-1, keepdims=True)
@@ -48,6 +56,7 @@ def _cca_feature(X, Yf, n_components=1):
     r = pearsonr(a, b)
     return r[0]
 
+
 def cca_feature(X, Yf, n_components=1, n_jobs=None):
     X = np.reshape(X, (-1, *X.shape[-2:]))
     Yf = np.reshape(Yf, (-1, *Yf.shape[-2:]))
@@ -57,17 +66,22 @@ def cca_feature(X, Yf, n_components=1, n_jobs=None):
     #     rs = Parallel(n_jobs=n_jobs)(delayed(partial(_cca_feature, n_components=n_components))(x, yf) for x in X)
     #     rhos.append(rs)
     # rhos = np.stack(rhos).T
-    
-    rhos = Parallel(n_jobs=n_jobs)(delayed(partial(_cca_feature, n_components=n_components))(x, yf) for x in X for yf in Yf)
+
+    rhos = Parallel(n_jobs=n_jobs)(
+        delayed(partial(_cca_feature, n_components=n_components))(x, yf)
+        for x in X
+        for yf in Yf
+    )
     rhos = np.reshape(rhos, (X.shape[0], Yf.shape[0]))
 
     return rhos
+
 
 class SCCA(BaseEstimator, TransformerMixin, ClassifierMixin):
     def __init__(self, Yf, n_components=1, n_jobs=None):
         if Yf is None:
             raise ValueError("The reference signals Yf should be provided.")
-        self.Yf = Yf        
+        self.Yf = Yf
         self.n_components = n_components
         self.n_jobs = n_jobs
 
@@ -76,13 +90,15 @@ class SCCA(BaseEstimator, TransformerMixin, ClassifierMixin):
 
     def transform(self, X):
         rhos = cca_feature(
-            X, self.Yf, n_components=self.n_components, n_jobs=self.n_jobs)
+            X, self.Yf, n_components=self.n_components, n_jobs=self.n_jobs
+        )
         return rhos
 
     def predict(self, X):
         rhos = self.transform(X)
         labels = np.argmax(rhos, axis=-1)
         return labels
+
 
 class FBSCCA(FilterBank, ClassifierMixin):
     r"""Filterbank SCCA.
@@ -101,12 +117,10 @@ class FBSCCA(FilterBank, ClassifierMixin):
     n_jobs : int, optional
         The number of CPUs to use to do the computation.
     """
-    def __init__(self,
-        filterbank,
-        Yf,
-        n_components=1,
-        filter_weights=None,
-        n_jobs=None):
+
+    def __init__(
+        self, filterbank, Yf, n_components=1, filter_weights=None, n_jobs=None
+    ):
         self.filterbank = filterbank
         self.Yf = Yf
         self.n_components = n_components
@@ -116,15 +130,17 @@ class FBSCCA(FilterBank, ClassifierMixin):
         if self.Yf is None:
             raise ValueError("The reference signals Yf should be provided.")
 
-        if (self.filter_weights is not None
-            and len(self.filter_weights) != len(filterbank)):
+        if self.filter_weights is not None and len(self.filter_weights) != len(
+            filterbank
+        ):
             raise ValueError("Filter weights and filterbank should be the same length.")
 
         super().__init__(
             SCCA(Yf, n_components=n_components, n_jobs=n_jobs),
             filterbank,
             concat=False,
-            n_jobs=n_jobs)
+            n_jobs=n_jobs,
+        )
 
     def fit(self, X=None, y=None):
         r"""Fit to data.
@@ -152,7 +168,8 @@ class FBSCCA(FilterBank, ClassifierMixin):
             Combined DSP correlation features.
         """
         self.estimators_ = [
-            clone(self.base_estimator) for _ in range(len(self.filterbank))]
+            clone(self.base_estimator) for _ in range(len(self.filterbank))
+        ]
         features = super().transform(X, axis=-1)
         if self.filter_weights is None:
             filter_weights = np.ones(len(self.filterbank))
@@ -180,33 +197,35 @@ class FBSCCA(FilterBank, ClassifierMixin):
         labels = np.argmax(features, axis=-1)
         return labels
 
+
 def _ecca_feature(X, T, Yf, n_components=1):
     rhos = []
     # 14a, 14d
     U1, V1 = cca_kernel(X, Yf, n_components=n_components)
-    a = U1.T@X
-    b = V1.T@Yf
+    a = U1.T @ X
+    b = V1.T @ Yf
     a, b = np.reshape(a, (-1)), np.reshape(b, (-1))
     rhos.append(pearsonr(a, b))
-    a = U1.T@X
-    b = U1.T@T
+    a = U1.T @ X
+    b = U1.T @ T
     a, b = np.reshape(a, (-1)), np.reshape(b, (-1))
     rhos.append(pearsonr(a, b))
     # 14b
     U2, _ = cca_kernel(X, T)
-    a = U2.T@X
-    b = U2.T@T
+    a = U2.T @ X
+    b = U2.T @ T
     a, b = np.reshape(a, (-1)), np.reshape(b, (-1))
     rhos.append(pearsonr(a, b))
     # 14c
     U3, _ = cca_kernel(T, Yf)
-    a = U3.T@X
-    b = U3.T@T
+    a = U3.T @ X
+    b = U3.T @ T
     a, b = np.reshape(a, (-1)), np.reshape(b, (-1))
     rhos.append(pearsonr(a, b))
     rhos = np.array(rhos)
-    r = np.sum(np.sign(rhos)*np.square(rhos))
+    r = np.sum(np.sign(rhos) * np.square(rhos))
     return r
+
 
 def ecca_feature(X, T, Yf, n_components=1, n_jobs=None):
     X = np.reshape(X, (-1, *X.shape[-2:]))
@@ -217,11 +236,16 @@ def ecca_feature(X, T, Yf, n_components=1, n_jobs=None):
     #     rs = Parallel(n_jobs=n_jobs)(delayed(partial(_ecca_feature, n_components=n_components))(x, t, yf) for x in X)
     #     rhos.append(rs)
     # rhos = np.stack(rhos).T
-    
-    rhos = Parallel(n_jobs=n_jobs)(delayed(partial(_ecca_feature, n_components=n_components))(x, t, yf) for x in X for t, yf in zip(T, Yf))
+
+    rhos = Parallel(n_jobs=n_jobs)(
+        delayed(partial(_ecca_feature, n_components=n_components))(x, t, yf)
+        for x in X
+        for t, yf in zip(T, Yf)
+    )
     rhos = np.reshape(rhos, (X.shape[0], Yf.shape[0]))
-    
+
     return rhos
+
 
 class ECCA(BaseEstimator, TransformerMixin, ClassifierMixin):
     def __init__(self, Yf, n_components=1, n_jobs=None):
@@ -235,20 +259,22 @@ class ECCA(BaseEstimator, TransformerMixin, ClassifierMixin):
         self.classes_ = np.unique(y)
         X = np.reshape(X, (-1, *X.shape[-2:]))
         X = X - np.mean(X, axis=-1, keepdims=True)
-        self.T_ = np.stack([np.mean(X[y==label], axis=0) for label in self.classes_])
+        self.T_ = np.stack([np.mean(X[y == label], axis=0) for label in self.classes_])
         return self
 
     def transform(self, X):
         X = np.reshape(X, (-1, *X.shape[-2:]))
         X = X - np.mean(X, axis=-1, keepdims=True)
         rhos = ecca_feature(
-            X, self.T_, self.Yf, n_components=self.n_components, n_jobs=self.n_jobs)
+            X, self.T_, self.Yf, n_components=self.n_components, n_jobs=self.n_jobs
+        )
         return rhos
 
     def predict(self, X):
         rhos = self.transform(X)
         labels = self.classes_[np.argmax(rhos, axis=-1)]
         return labels
+
 
 class FBECCA(FilterBank, ClassifierMixin):
     r"""Filterbank ECCA.
@@ -267,12 +293,10 @@ class FBECCA(FilterBank, ClassifierMixin):
     n_jobs : int, optional
         The number of CPUs to use to do the computation.
     """
-    def __init__(self,
-        filterbank,
-        Yf,
-        n_components=1,
-        filter_weights=None,
-        n_jobs=None):
+
+    def __init__(
+        self, filterbank, Yf, n_components=1, filter_weights=None, n_jobs=None
+    ):
         self.filterbank = filterbank
         self.Yf = Yf
         self.n_components = n_components
@@ -282,15 +306,17 @@ class FBECCA(FilterBank, ClassifierMixin):
         if self.Yf is None:
             raise ValueError("The reference signals Yf should be provided.")
 
-        if (self.filter_weights is not None
-            and len(self.filter_weights) != len(filterbank)):
+        if self.filter_weights is not None and len(self.filter_weights) != len(
+            filterbank
+        ):
             raise ValueError("Filter weights and filterbank should be the same length.")
 
         super().__init__(
             ECCA(Yf, n_components=n_components, n_jobs=n_jobs),
             filterbank,
             concat=False,
-            n_jobs=n_jobs)
+            n_jobs=n_jobs,
+        )
 
     def fit(self, X, y):
         r"""Fit to data.

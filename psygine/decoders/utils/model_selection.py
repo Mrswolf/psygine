@@ -7,11 +7,19 @@
 import warnings
 import random
 import numpy as np
-from sklearn.model_selection import (StratifiedKFold, StratifiedShuffleSplit, LeaveOneGroupOut)
+from sklearn.model_selection import (
+    StratifiedKFold,
+    StratifiedShuffleSplit,
+    LeaveOneGroupOut,
+)
 
 __all__ = [
-    'set_random_seeds', 'EnhancedStratifiedKFold', 'EnhancedLeaveOneGroupOut', 'EnhancedStratifiedShuffleSplit'
+    "set_random_seeds",
+    "EnhancedStratifiedKFold",
+    "EnhancedLeaveOneGroupOut",
+    "EnhancedStratifiedShuffleSplit",
 ]
+
 
 def set_random_seeds(seed):
     r"""Set random seed for python, numpy and torch.
@@ -25,6 +33,7 @@ def set_random_seeds(seed):
     np.random.seed(seed)
     try:
         import torch
+
         torch.manual_seed(seed)
         if torch.cuda.is_available():
             # torch.cuda.manual_seed_all(seed)
@@ -35,6 +44,7 @@ def set_random_seeds(seed):
             torch.backends.cudnn.deterministic = True
     except ImportError:
         pass
+
 
 class EnhancedStratifiedKFold(StratifiedKFold):
     r"""Wrapped Stratified K-Folds cross-validator.
@@ -61,18 +71,22 @@ class EnhancedStratifiedKFold(StratifiedKFold):
         When `shuffle` is True, `random_state` affects the ordering of the
         indices, which controls the randomness of each fold for each class.
     """
-    def __init__(self,
+
+    def __init__(
+        self,
         n_splits=5,
         shuffle=False,
         validate_set=False,
         validate_size=0.1,
-        random_state=None):
+        random_state=None,
+    ):
         self.validate_set = validate_set
         if self.validate_set:
             if not isinstance(validate_size, float):
                 raise ValueError("validate size should be float")
             self.validate_spliter = StratifiedShuffleSplit(
-                n_splits=1, test_size=validate_size, random_state=random_state)
+                n_splits=1, test_size=validate_size, random_state=random_state
+            )
         super().__init__(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
 
     def split(self, X, y, groups=None):
@@ -101,10 +115,13 @@ class EnhancedStratifiedKFold(StratifiedKFold):
         """
         for train, test in super().split(X, y, groups=groups):
             if self.validate_set:
-                train_idx, validate_idx = next(self.validate_spliter.split(X[train], y[train], groups=groups))
+                train_idx, validate_idx = next(
+                    self.validate_spliter.split(X[train], y[train], groups=groups)
+                )
                 yield train[train_idx], train[validate_idx], test
             else:
                 yield train, test
+
 
 class EnhancedLeaveOneGroupOut(LeaveOneGroupOut):
     r"""Wrapped Leave One Group Out cross-validator.
@@ -121,6 +138,7 @@ class EnhancedLeaveOneGroupOut(LeaveOneGroupOut):
     validate_set : bool, default False
         Whether to return validate set.
     """
+
     def __init__(self, validate_set=False):
         super().__init__()
         self.validate_set = validate_set
@@ -158,7 +176,9 @@ class EnhancedLeaveOneGroupOut(LeaveOneGroupOut):
         for train, test in super().split(X, y, groups):
             if self.validate_set:
                 n_repeat = np.random.randint(1, n_splits)
-                validate_iter = self.validate_spliter.split(X[train], y[train], groups[train])
+                validate_iter = self.validate_spliter.split(
+                    X[train], y[train], groups[train]
+                )
                 for _ in range(n_repeat):
                     train_idx, validate_idx = next(validate_iter)
                 yield train[train_idx], train[validate_idx], test
@@ -168,13 +188,17 @@ class EnhancedLeaveOneGroupOut(LeaveOneGroupOut):
     def _generate_sequential_groups(self, y):
         labels = np.unique(y)
         groups = np.zeros((len(y)))
-        idxs = [y==label for label in labels]
+        idxs = [y == label for label in labels]
         n_labels = [np.sum(idx) for idx in idxs]
         if len(np.unique(n_labels)) > 1:
-            warnings.warn("y is not balanced, the generated groups is not balanced as well.", RuntimeWarning)
+            warnings.warn(
+                "y is not balanced, the generated groups is not balanced as well.",
+                RuntimeWarning,
+            )
         for idx, n_label in zip(idxs, n_labels):
             groups[idx] = np.arange(n_label)
         return groups
+
 
 class EnhancedStratifiedShuffleSplit(StratifiedShuffleSplit):
     r"""Wrapped Stratified ShuffleSplit cross-validator.
@@ -208,12 +232,15 @@ class EnhancedStratifiedShuffleSplit(StratifiedShuffleSplit):
         When `shuffle` is True, `random_state` affects the ordering of the
         indices, which controls the randomness of each fold for each class.
     """
-    def __init__(self,
+
+    def __init__(
+        self,
         test_size,
         n_splits=5,
         validate_set=False,
         validate_size=0.1,
-        random_state=None):
+        random_state=None,
+    ):
         self.validate_set = validate_set
         if not isinstance(test_size, float):
             raise ValueError("test size should be float")
@@ -229,13 +256,18 @@ class EnhancedStratifiedShuffleSplit(StratifiedShuffleSplit):
         super().__init__(
             n_splits=n_splits,
             test_size=test_size,
-            train_size=train_size+validate_size,
-            random_state=random_state)
+            train_size=train_size + validate_size,
+            random_state=random_state,
+        )
 
         if self.validate_set:
             total_size = validate_size + train_size
             self.validate_spliter = StratifiedShuffleSplit(
-                n_splits=1, test_size=validate_size/total_size, train_size=train_size/total_size, random_state=random_state)
+                n_splits=1,
+                test_size=validate_size / total_size,
+                train_size=train_size / total_size,
+                random_state=random_state,
+            )
 
     def split(self, X, y, groups=None):
         r"""Generate indices to split data into training, validate and test set.
@@ -263,7 +295,9 @@ class EnhancedStratifiedShuffleSplit(StratifiedShuffleSplit):
         """
         for train, test in super().split(X, y, groups=groups):
             if self.validate_set:
-                train_idx, validate_idx = next(self.validate_spliter.split(X[train], y[train], groups=groups))
+                train_idx, validate_idx = next(
+                    self.validate_spliter.split(X[train], y[train], groups=groups)
+                )
                 yield train[train_idx], train[validate_idx], test
             else:
                 yield train, test

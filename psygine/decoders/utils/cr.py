@@ -6,9 +6,8 @@
 """
 import numpy as np
 
-__all__ = [
-    'rref', 'cr'
-]
+__all__ = ["rref", "cr"]
+
 
 def rref(A):
     r"""Reduced row echelon form.
@@ -29,7 +28,7 @@ def rref(A):
     m, n = A.shape
     i, j = 0, 0
     jb = []
-    tol = np.maximum(m, n)*np.finfo(np.float64).eps*np.linalg.norm(A, ord=np.inf)
+    tol = np.maximum(m, n) * np.finfo(np.float64).eps * np.linalg.norm(A, ord=np.inf)
     while i < m and j < n:
         # find index and value of the largest element in the remainder of column
         k = np.argmax(np.abs(A[i:m, j])) + i
@@ -44,14 +43,15 @@ def rref(A):
             # swap the i-th and k-th rows
             A[[i, k]] = A[[k, i]]
             # divide the pivot row(i) by the pivot element A[i, j]
-            A[i, j:n]  = A[i, j:n] / A[i, j]
+            A[i, j:n] = A[i, j:n] / A[i, j]
             # substract multiples of the pivot row from all the other rows
             for k in range(m):
                 if k != i:
-                    A[k, j:n] -= A[k, j]*A[i, j:n]
+                    A[k, j:n] -= A[k, j] * A[i, j:n]
             j += 1
             i += 1
     return A, np.array(jb)
+
 
 def cr(A):
     r"""Column-Row factorization.
@@ -92,7 +92,7 @@ def cr(A):
     .. [2] https://blogs.mathworks.com/cleve/2020/10/23/gil-strang-and-the-cr-matrix-factorization/#4733a7bc-91f3-4c3a-8a51-6b7918e2d566
     """
     R, j = rref(A)
-    r = len(j) # the rank of A
-    R = R[:r, :] # the reduced form of R
+    r = len(j)  # the rank of A
+    R = R[:r, :]  # the reduced form of R
     C = A[:, j]
     return C, R

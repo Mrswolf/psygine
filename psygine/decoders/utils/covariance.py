@@ -11,10 +11,17 @@ from sklearn.covariance import oas, ledoit_wolf, fast_mcd, empirical_covariance
 from joblib import Parallel, delayed
 
 __all__ = [
-    'is_positive_definite', 'nearest_positive_definite',
-    'covariances',
-    'positive_definite_operator', 'sqrtm', 'invsqrtm', 'logm', 'expm', 'powm'
+    "is_positive_definite",
+    "nearest_positive_definite",
+    "covariances",
+    "positive_definite_operator",
+    "sqrtm",
+    "invsqrtm",
+    "logm",
+    "expm",
+    "powm",
 ]
+
 
 def is_positive_definite(A):
     r"""Determine if the input matrix is positive-definite.
@@ -46,6 +53,7 @@ def is_positive_definite(A):
         return True
     except np.linalg.LinAlgError:
         return False
+
 
 def nearest_positive_definite(A):
     r"""Find the nearest postive-definite matrix to the input matrix.
@@ -101,9 +109,10 @@ def nearest_positive_definite(A):
         k += 1
     return A3
 
+
 def _lwf(X):
     r"""Wrapper for sklearn ledoit wolf covariance estimator.
-    
+
     Parameters
     ----------
     X : (n, m) array_like
@@ -117,9 +126,10 @@ def _lwf(X):
     C, _ = ledoit_wolf(X.T)
     return C
 
+
 def _oas(X):
     """Wrapper for sklearn oas covariance estimator.
-    
+
     Parameters
     ----------
     X : (n, m) array_like
@@ -133,9 +143,10 @@ def _oas(X):
     C, _ = oas(X.T)
     return C
 
+
 def _mcd(X):
     """Wrapper for sklearn mcd covariance estimator.
-    
+
     Parameters
     ----------
     X : (n, m) array_like
@@ -149,9 +160,10 @@ def _mcd(X):
     _, C, _, _ = fast_mcd(X.T)
     return C
 
+
 def _cov(X):
     """Wrapper for sklearn empirical covariance estimator.
-    
+
     Parameters
     ----------
     X : (n, m) array_like
@@ -165,12 +177,14 @@ def _cov(X):
     C = empirical_covariance(X.T)
     return C
 
+
 _covariance_estimators = {
-    'cov': _cov,
-    'lwf': _lwf,
-    'oas': _oas,
-    'mcd': _mcd,
+    "cov": _cov,
+    "lwf": _lwf,
+    "oas": _oas,
+    "mcd": _mcd,
 }
+
 
 def _check_cov_est(est):
     r"""Check if a given covariance estimator is valid.
@@ -192,10 +206,13 @@ def _check_cov_est(est):
     else:
         raise ValueError(
             """%s is not an valid estimator ! Valid estimators are : %s or a
-             callable function""" % (est, (' , ').join(_covariance_estimators.keys())))
+             callable function"""
+            % (est, (" , ").join(_covariance_estimators.keys()))
+        )
     return est
 
-def covariances(X, estimator='cov', n_jobs=None):
+
+def covariances(X, estimator="cov", n_jobs=None):
     r"""Covariance matrices of the inputs.
 
     Parameters
@@ -233,14 +250,14 @@ def covariances(X, estimator='cov', n_jobs=None):
 
     parallel = Parallel(n_jobs=n_jobs)
     est = _check_cov_est(estimator)
-    covmats = parallel(
-        delayed(est)(x) for x in X)
+    covmats = parallel(delayed(est)(x) for x in X)
     covmats = np.reshape(covmats, (*shape[:-2], shape[-2], shape[-2]))
     return covmats
 
+
 def positive_definite_operator(P, operator, n_jobs=None):
     r"""Apply matrix operator to postive-definite matrices.
-    
+
     Parameters
     ----------
     P : (..., n, n) array_like
@@ -249,12 +266,12 @@ def positive_definite_operator(P, operator, n_jobs=None):
         Any callable object or function on eigen values of a positive-definite matrix.
     n_jobs: int, optional
         The number of cores to do the computation, default None.
-    
+
     Returns
     -------
     P_hat : (..., n, n) array_like
         Operated matrices.
-    
+
     Raises
     ------
     ValueError
@@ -269,19 +286,23 @@ def positive_definite_operator(P, operator, n_jobs=None):
 
     where :math:`\mathbf{\Lambda}` is the eigenvalues and :math:`\mathbf{V}` is the eigenvectors of :math:`\mathbf{Ci}`.
     """
+
     def _single_matrix_operator(Ci, operator):
         if not is_positive_definite(Ci):
             raise ValueError("The input matrix should be positive-definite.")
         eigvals, eigvects = eigh(Ci)
         eigvals = np.diag(operator(eigvals))
-        Co = eigvects@eigvals@eigvects.T
+        Co = eigvects @ eigvals @ eigvects.T
         return Co
 
     shape = P.shape
     P = P.reshape((-1, *shape[-2:]))
-    P_hat = Parallel(n_jobs=n_jobs)(delayed(_single_matrix_operator)(Ci, operator) for Ci in P)
+    P_hat = Parallel(n_jobs=n_jobs)(
+        delayed(_single_matrix_operator)(Ci, operator) for Ci in P
+    )
     P_hat = np.reshape(P_hat, (*shape,))
     return P_hat
+
 
 def sqrtm(P, n_jobs=None):
     r"""Return the matrix square root of positive-definite matrices.
@@ -309,6 +330,7 @@ def sqrtm(P, n_jobs=None):
     """
     return positive_definite_operator(P, np.sqrt, n_jobs=n_jobs)
 
+
 def invsqrtm(P, n_jobs=None):
     r"""Return the inverse matrix square root of positive-definite matrices.
 
@@ -331,8 +353,9 @@ def invsqrtm(P, n_jobs=None):
 
     where :math:`\mathbf{\Lambda}` is the eigenvalues and :math:`\mathbf{V}` is the eigenvectors of :math:`\mathbf{Ci}`.
     """
-    isqrt = lambda x: 1. / np.sqrt(x)
+    isqrt = lambda x: 1.0 / np.sqrt(x)
     return positive_definite_operator(P, isqrt, n_jobs=n_jobs)
+
 
 def logm(P, n_jobs=None):
     r"""Return the matrix logrithm of positive-definite matrices.
@@ -357,6 +380,7 @@ def logm(P, n_jobs=None):
     where :math:`\mathbf{\Lambda}` is the eigenvalues and :math:`\mathbf{V}` is the eigenvectors of :math:`\mathbf{Ci}`.
     """
     return positive_definite_operator(P, np.log, n_jobs=n_jobs)
+
 
 def expm(P, n_jobs=None):
     r"""Return the matrix exponential of positive-definite matrices.
@@ -383,6 +407,7 @@ def expm(P, n_jobs=None):
     where :math:`\mathbf{\Lambda}` is the eigenvalues and :math:`\mathbf{V}` is the eigenvectors of :math:`\mathbf{Ci}`.
     """
     return positive_definite_operator(P, np.exp, n_jobs=n_jobs)
+
 
 def powm(P, alpha, n_jobs=None):
     r"""Return the matrix power of positive-definite matrices.
@@ -412,4 +437,3 @@ def powm(P, alpha, n_jobs=None):
     """
     power = partial(lambda x, alpha=None: x**alpha, alpha=alpha)
     return positive_definite_operator(P, power, n_jobs=n_jobs)
-

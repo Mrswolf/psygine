@@ -5,10 +5,10 @@
 # License: MIT License
 """Yale Face B Dataset.
 
-The original link is dead now. Here are my modifed version from 
-https://github.com/Franjcf/Data-Science-Projects/blob/main/face_recognition_PCA/YALEBXF.mat. The http download is not working and i don't know why.
+https://github.com/Franjcf/Data-Science-Projects/blob/main/face_recognition_PCA/YALEBXF.mat.
 """
 import os.path as op
+from pathlib import Path
 from collections import OrderedDict
 
 from .base import BaseYaleFaceDataset
@@ -16,9 +16,9 @@ from ..utils.network import get_data_path
 from ..utils.io import loadmat
 
 import numpy as np
+from scipy.io import savemat
 
-# YALEFACEB_URL = "http://cornelltech.github.io/cs5785-fall-2017/data/faces.zip"
-# YALEFACEB_URL = "https://github.com/Franjcf/Data-Science-Projects/blob/main/face_recognition_PCA/YALEBXF.mat"
+YALEFACEB_URL = "https://github.com/Franjcf/Data-Science-Projects/raw/main/face_recognition_PCA/YALEBXF.mat"
 
 
 class YaleFaceBDataset(BaseYaleFaceDataset):
@@ -35,13 +35,26 @@ class YaleFaceBDataset(BaseYaleFaceDataset):
             op.dirname(__file__), "data", "person_{:02d}.mat".format(subject_id)
         )
         file_dest = get_data_path(
-            url,
+            YALEFACEB_URL,
             "yaleface",
             path=local_path,
             proxies=proxies,
             force_update=force_update,
         )
-        return [file_dest]
+        file_path = op.join(
+            Path(file_dest).parent, "person_{:02d}.mat".format(subject_id)
+        )
+        if not op.exists(file_path):
+            raw = loadmat(file_dest)
+            X, Y = raw["X"], raw["Y"]
+            for i in self.subjects:
+                images = X[:, Y == i]
+                images = np.reshape(images, (192, 168, -1), order="F")
+                savemat(
+                    op.join(Path(file_dest).parent, "person_{:02d}.mat".format(i)),
+                    {"images": images},
+                )
+        return [file_path]
 
     def get_data(self, subject_ids=None):
         if subject_ids is None:

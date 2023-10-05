@@ -14,9 +14,8 @@ from sklearn.preprocessing import LabelEncoder
 from .base import BaseParadigm
 from .utils.hooks import RemovableHandle
 
-__all__ = [
-    'BaseEegParadigm', 'MiEegParadigm', 'SsvepEegParadigm'
-]
+__all__ = ["BaseEegParadigm", "MiEegParadigm", "SsvepEegParadigm"]
+
 
 class BaseEegParadigm(BaseParadigm):
     r"""Base EEG Paradigm.
@@ -44,7 +43,16 @@ class BaseEegParadigm(BaseParadigm):
     uid : str
         The unique id for the current paradigm.
     """
-    def __init__(self, uid, channels=None, events=None, intervals=None, srate=None, dataset_hooks=True):
+
+    def __init__(
+        self,
+        uid,
+        channels=None,
+        events=None,
+        intervals=None,
+        srate=None,
+        dataset_hooks=True,
+    ):
         super().__init__(uid)
         if channels is not None:
             channels = [ch.upper() for ch in channels]
@@ -61,15 +69,23 @@ class BaseEegParadigm(BaseParadigm):
         if channels is not None:
             for channel in channels:
                 if channel not in dataset.channels:
-                    raise ValueError("{:s} is not an available channel in dataset {:s}.".format(channel, dataset.uid))
+                    raise ValueError(
+                        "{:s} is not an available channel in dataset {:s}.".format(
+                            channel, dataset.uid
+                        )
+                    )
 
         if events is not None:
             for event in events:
                 if event not in dataset.events:
-                    raise ValueError("{:s} is not an available event in dataset {:s}.".format(event, dataset.uid))
+                    raise ValueError(
+                        "{:s} is not an available event in dataset {:s}.".format(
+                            event, dataset.uid
+                        )
+                    )
 
         if intervals is not None:
-            if (1 != len(intervals) and len(events) != len(intervals)):
+            if 1 != len(intervals) and len(events) != len(intervals):
                 return False
 
             for interval in intervals:
@@ -99,7 +115,12 @@ class BaseEegParadigm(BaseParadigm):
             return False
         # check arguments
         if not self._is_valid_args(
-            dataset, self._paradigm_channels, self._paradigm_events, self._paradigm_intervals, self._paradigm_srate):
+            dataset,
+            self._paradigm_channels,
+            self._paradigm_events,
+            self._paradigm_intervals,
+            self._paradigm_srate,
+        ):
             return False
         return True
 
@@ -123,90 +144,102 @@ class BaseEegParadigm(BaseParadigm):
 
     def _get_single_subject_data(self, dataset, subject_id):
         channels, events, intervals, srate = self._parse_args(
-            dataset, self._paradigm_channels, self._paradigm_events, self._paradigm_intervals, self._paradigm_srate)
+            dataset,
+            self._paradigm_channels,
+            self._paradigm_events,
+            self._paradigm_intervals,
+            self._paradigm_srate,
+        )
 
         le = LabelEncoder().fit(events)
 
-        rawdata = dataset.get_rawdata(subject_ids=[subject_id])['subject_{:d}'.format(subject_id)]
+        rawdata = dataset.get_rawdata(subject_ids=[subject_id])[
+            "subject_{:d}".format(subject_id)
+        ]
 
         sub_X, sub_y, sub_meta = {}, {}, {}
         for session_id, runs in rawdata.items():
             for run_id, raw in runs.items():
-
                 if self._raw_hooks:
                     for hook in (*self._raw_hooks.values(),):
                         result = hook(self, raw)
                         if result is not None:
                             if not isinstance(result, tuple):
                                 result = (result,)
-                            raw, = result
+                            (raw,) = result
                 elif self._dataset_hooks:
-                    if hasattr(dataset, 'raw_hook'):
+                    if hasattr(dataset, "raw_hook"):
                         result = dataset.raw_hook(self, raw)
                         if result is not None:
                             if not isinstance(result, tuple):
                                 result = (result,)
-                            raw, = result
+                            (raw,) = result
 
                 channel_picks = mne.pick_channels(
-                    dataset.channels, channels,
-                    ordered=True)
+                    dataset.channels, channels, ordered=True
+                )
 
                 # find available events, first check stim channels then annotations
                 try:
                     all_events = mne.find_events(
-                        raw,
-                        shortest_event=0,
-                        initial_event=True,
-                        verbose=False)
+                        raw, shortest_event=0, initial_event=True, verbose=False
+                    )
                 except ValueError:
                     all_events, _ = mne.events_from_annotations(
-                        raw,
-                        event_id=lambda x: int(x),
-                        verbose=False)
+                        raw, event_id=lambda x: int(x), verbose=False
+                    )
 
                 for event, interval in zip(events, intervals):
                     try:
                         epoch = mne.Epochs(
-                            raw, all_events,
-                            event_id={event:dataset.get_event_id(event)},
-                            tmin=interval[0], tmax=interval[1] - 1./raw.info['sfreq'], # exclude the end point
+                            raw,
+                            all_events,
+                            event_id={event: dataset.get_event_id(event)},
+                            tmin=interval[0],
+                            tmax=interval[1]
+                            - 1.0 / raw.info["sfreq"],  # exclude the end point
                             picks=channel_picks,
-                            proj=False, preload=True, baseline=None,
-                            on_missing='raise', event_repeated='drop',verbose=False)
+                            proj=False,
+                            preload=True,
+                            baseline=None,
+                            on_missing="raise",
+                            event_repeated="drop",
+                            verbose=False,
+                        )
                     except ValueError:
                         # skip the empty event
                         continue
-                    
+
                     if self._epoch_hooks:
                         for hook in (*self._epoch_hooks.values(),):
                             result = hook(self, epoch)
                             if result is not None:
                                 if not isinstance(result, tuple):
                                     result = (result,)
-                                epoch, = result
+                                (epoch,) = result
                     elif self._dataset_hooks:
-                        if hasattr(dataset, 'epoch_hook'):
+                        if hasattr(dataset, "epoch_hook"):
                             result = dataset.epoch_hook(self, epoch)
                             if result is not None:
                                 if not isinstance(result, tuple):
                                     result = (result,)
-                                epoch, = result
+                                (epoch,) = result
 
                     if srate < dataset.srate:
                         epoch = epoch.resample(srate, verbose=False)
 
-                    X = epoch[event].get_data() * 1e6 # default micro-volt
+                    X = epoch[event].get_data() * 1e6  # default micro-volt
                     y = le.transform([event] * len(X))
                     meta = pd.DataFrame(
                         {
-                            "subject": ['subject_{:d}'.format(subject_id)]*len(X),
-                            "session": [session_id]*len(X),
-                            "run": [run_id]*len(X),
+                            "subject": ["subject_{:d}".format(subject_id)] * len(X),
+                            "session": [session_id] * len(X),
+                            "run": [run_id] * len(X),
                             "trial": epoch[event].selection,
-                            "event": [event]*len(X),
-                            "dataset": [dataset.uid]*len(X)
-                        })
+                            "event": [event] * len(X),
+                            "dataset": [dataset.uid] * len(X),
+                        }
+                    )
 
                     if self._array_hooks:
                         for hook in (*self._array_hooks.values(),):
@@ -216,7 +249,7 @@ class BaseEegParadigm(BaseParadigm):
                                     result = (result,)
                                 X, y, meta = result
                     elif self._dataset_hooks:
-                        if hasattr(dataset, 'array_hook'):
+                        if hasattr(dataset, "array_hook"):
                             result = dataset.array_hook(self, X, y, meta)
                             if result is not None:
                                 if not isinstance(result, tuple):
@@ -224,9 +257,21 @@ class BaseEegParadigm(BaseParadigm):
                                 X, y, meta = result
 
                     # gathering data
-                    sub_X[event] = np.concatenate((sub_X[event], X), axis=0) if event in sub_X else X
-                    sub_y[event] = np.concatenate((sub_y[event], y), axis=0) if event in sub_y else y
-                    sub_meta[event] = pd.concat((sub_meta[event], meta), axis=0, ignore_index=True) if event in sub_meta else meta
+                    sub_X[event] = (
+                        np.concatenate((sub_X[event], X), axis=0)
+                        if event in sub_X
+                        else X
+                    )
+                    sub_y[event] = (
+                        np.concatenate((sub_y[event], y), axis=0)
+                        if event in sub_y
+                        else y
+                    )
+                    sub_meta[event] = (
+                        pd.concat((sub_meta[event], meta), axis=0, ignore_index=True)
+                        if event in sub_meta
+                        else meta
+                    )
         return sub_X, sub_y, sub_meta
 
     def get_data(self, dataset, subject_ids=None, n_jobs=None, concat=False):
@@ -258,27 +303,54 @@ class BaseEegParadigm(BaseParadigm):
         st = time.time()
         X_list, y_list, meta_list = super().get_data(dataset, subject_ids, n_jobs)
         _, events, _, _ = self._parse_args(
-            dataset, self._paradigm_channels, self._paradigm_events, self._paradigm_intervals, self._paradigm_srate)
+            dataset,
+            self._paradigm_channels,
+            self._paradigm_events,
+            self._paradigm_intervals,
+            self._paradigm_srate,
+        )
         if subject_ids is None:
             subject_ids = dataset.subjects
         X, y, meta = {}, {}, {}
         for event in events:
             X[event] = np.concatenate(
-                [X_list[i][event] for i in range(len(subject_ids)) if event in X_list[i]], axis=0)
-            y[event] =  np.concatenate(
-                [y_list[i][event] for i in range(len(subject_ids)) if event in y_list[i]], axis=0)
+                [
+                    X_list[i][event]
+                    for i in range(len(subject_ids))
+                    if event in X_list[i]
+                ],
+                axis=0,
+            )
+            y[event] = np.concatenate(
+                [
+                    y_list[i][event]
+                    for i in range(len(subject_ids))
+                    if event in y_list[i]
+                ],
+                axis=0,
+            )
             meta[event] = pd.concat(
-                [meta_list[i][event] for i in range(len(subject_ids)) if event in meta_list[i]], axis=0, ignore_index=True)
+                [
+                    meta_list[i][event]
+                    for i in range(len(subject_ids))
+                    if event in meta_list[i]
+                ],
+                axis=0,
+                ignore_index=True,
+            )
         if concat:
             try:
                 X = np.concatenate([X[event] for event in events], axis=0)
                 y = np.concatenate([y[event] for event in events], axis=0)
                 meta = pd.concat(
-                    [meta[event] for event in events], axis=0, ignore_index=True)
+                    [meta[event] for event in events], axis=0, ignore_index=True
+                )
             except ValueError:
-                print("All the input array dimensions for the concatenation axis must match exactly.\nSkip concat step.")
+                print(
+                    "All the input array dimensions for the concatenation axis must match exactly.\nSkip concat step."
+                )
         elapsed_time = time.time() - st
-        print('Loading time: {:.4f}s'.format(elapsed_time))
+        print("Loading time: {:.4f}s".format(elapsed_time))
         return X, y, meta
 
     def register_raw_hook(self, hook):
@@ -295,6 +367,7 @@ class BaseEegParadigm(BaseParadigm):
         handle = RemovableHandle(self._array_hooks)
         self._array_hooks[handle.id] = hook
         return handle
+
 
 class MiEegParadigm(BaseEegParadigm):
     r"""Base MI EEG Paradigm.
@@ -320,14 +393,19 @@ class MiEegParadigm(BaseEegParadigm):
     uid : str
         The unique id for the current paradigm.
     """
-    def __init__(self, channels=None, events=None, intervals=None, srate=None, dataset_hooks=True):
+
+    def __init__(
+        self, channels=None, events=None, intervals=None, srate=None, dataset_hooks=True
+    ):
         super().__init__(
-            'mi-eeg',
+            "mi-eeg",
             channels=channels,
             events=events,
             intervals=intervals,
             srate=srate,
-            dataset_hooks=dataset_hooks)
+            dataset_hooks=dataset_hooks,
+        )
+
 
 class SsvepEegParadigm(BaseEegParadigm):
     r"""Base SSVEP EEG Paradigm.
@@ -353,11 +431,15 @@ class SsvepEegParadigm(BaseEegParadigm):
     uid : str
         The unique id for the current paradigm.
     """
-    def __init__(self, channels=None, events=None, intervals=None, srate=None, dataset_hooks=True):
+
+    def __init__(
+        self, channels=None, events=None, intervals=None, srate=None, dataset_hooks=True
+    ):
         super().__init__(
-            'ssvep-eeg',
+            "ssvep-eeg",
             channels=channels,
             events=events,
             intervals=intervals,
             srate=srate,
-            dataset_hooks=dataset_hooks)
+            dataset_hooks=dataset_hooks,
+        )

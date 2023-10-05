@@ -8,8 +8,10 @@ import numpy as np
 from scipy.integrate import quad
 
 __all__ = [
-    'sign_flip', 'optimal_svht',
+    "sign_flip",
+    "optimal_svht",
 ]
+
 
 def sign_flip(U, V, X):
     r"""Flip signs of SVD.
@@ -52,21 +54,22 @@ def sign_flip(U, V, X):
     .. [2] https://www.mathworks.com/matlabcentral/fileexchange/22118-sign-correction-in-svd-and-pca
     """
     M = X / np.linalg.norm(X, axis=1, keepdims=True)
-    right_projections = np.mean(M@V, axis=0)
+    right_projections = np.mean(M @ V, axis=0)
     M = X / np.linalg.norm(X, axis=0, keepdims=True)
-    left_projections = np.mean(U.T@M, axis=1)
-    total_projections = right_projections+left_projections
+    left_projections = np.mean(U.T @ M, axis=1)
+    total_projections = right_projections + left_projections
     signs = np.sign(total_projections)
 
-    random_sign_idx = (signs==0)
+    random_sign_idx = signs == 0
     if np.any(random_sign_idx):
         # arbitrary signs due to nearly zero magnitudes
         signs[random_sign_idx] = 1
 
-    U = U*signs
-    V = V*signs
+    U = U * signs
+    V = V * signs
 
     return U, V
+
 
 def optimal_svht(m, n, sigma, noise_known=False):
     r"""Optimal SVD hard thresholding.
@@ -131,16 +134,23 @@ def optimal_svht(m, n, sigma, noise_known=False):
 
     if noise_known:
         weight = np.sqrt(
-            2*(beta+1) + 8*beta/(beta+1+np.sqrt(beta**2+14*beta+1)))
+            2 * (beta + 1) + 8 * beta / (beta + 1 + np.sqrt(beta**2 + 14 * beta + 1))
+        )
         tau = weight * np.sqrt(m) * sigma
     else:
         weight = np.sqrt(
-            2*(beta+1) + 8*beta/(beta+1+np.sqrt(beta**2+14*beta+1)))
+            2 * (beta + 1) + 8 * beta / (beta + 1 + np.sqrt(beta**2 + 14 * beta + 1))
+        )
         # approximate the median of the Marcenko-Pastur distribution numerically
-        lower_bound = (1-np.sqrt(beta))**2
-        upper_bound = (1+np.sqrt(beta))**2
+        lower_bound = (1 - np.sqrt(beta)) ** 2
+        upper_bound = (1 + np.sqrt(beta)) ** 2
         # the correct median equation
-        int_func = lambda t: np.sqrt((upper_bound-t)*(t-lower_bound))/(2*np.pi*beta*t) if (upper_bound-t)*(t-lower_bound)>0 else 0
+        int_func = (
+            lambda t: np.sqrt((upper_bound - t) * (t - lower_bound))
+            / (2 * np.pi * beta * t)
+            if (upper_bound - t) * (t - lower_bound) > 0
+            else 0
+        )
 
         lo = lower_bound
         hi = upper_bound
@@ -153,7 +163,7 @@ def optimal_svht(m, n, sigma, noise_known=False):
                 lo = t_vec[2]
             else:
                 break
-        miu_beta = (lo+hi)/2
+        miu_beta = (lo + hi) / 2
         weight = weight / np.sqrt(miu_beta)
         tau = weight * sigma
     return tau

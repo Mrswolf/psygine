@@ -13,10 +13,24 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from psygine.decoders.utils import covariances, sqrtm, invsqrtm, logm, expm, powm
 
 __all__ = [
-    'logmap', 'expmap', 'geodesic', 'distance_riemann', 'mean_riemann', 'vectorize', 'unvectorize',
-    'tangent_space', 'untangent_space', 'mdrm_kernel',
-    'MDRM', 'FGDA', 'FgMDRM', 'TSClassifier', 'Align', 'AdaAlign'
+    "logmap",
+    "expmap",
+    "geodesic",
+    "distance_riemann",
+    "mean_riemann",
+    "vectorize",
+    "unvectorize",
+    "tangent_space",
+    "untangent_space",
+    "mdrm_kernel",
+    "MDRM",
+    "FGDA",
+    "FgMDRM",
+    "TSClassifier",
+    "Align",
+    "AdaAlign",
 ]
+
 
 def logmap(Pi, P, n_jobs=None):
     r"""Logarithm map from the positive-definite space to the tangent space.
@@ -38,7 +52,7 @@ def logmap(Pi, P, n_jobs=None):
 
     Notes
     -----
-    Logarithm map projects :math:`\mathbf{P}_i \in \mathcal{M}` to the tangent space point 
+    Logarithm map projects :math:`\mathbf{P}_i \in \mathcal{M}` to the tangent space point
     :math:`\mathbf{S}_i \in \mathcal{T}_{\mathbf{P}} \mathcal{M}` at :math:`\mathbf{P} \in \mathcal{M}`.
     """
     P12 = sqrtm(P, n_jobs=n_jobs)
@@ -46,6 +60,7 @@ def logmap(Pi, P, n_jobs=None):
     wPi = np.matmul(np.matmul(iP12, Pi), iP12)
     Si = np.matmul(np.matmul(P12, logm(wPi, n_jobs=n_jobs)), P12)
     return Si
+
 
 def expmap(Si, P, n_jobs=None):
     r"""Exponential map from the tangent space to the positive-definite space.
@@ -74,6 +89,7 @@ def expmap(Si, P, n_jobs=None):
     wSi = np.matmul(np.matmul(iP12, Si), iP12)
     Pi = np.matmul(np.matmul(P12, expm(wSi, n_jobs=n_jobs)), P12)
     return Pi
+
 
 def geodesic(P1, P2, t, n_jobs=None):
     r"""Geodesic between P1 and P2.
@@ -108,6 +124,7 @@ def geodesic(P1, P2, t, n_jobs=None):
     phi = np.matmul(np.matmul(P12, powm(wP2, t, n_jobs=n_jobs)), P12)
     return phi
 
+
 def distance_riemann(A, B, n_jobs=None):
     r"""Riemannian distance between two covariance matrices A and B.
 
@@ -132,10 +149,9 @@ def distance_riemann(A, B, n_jobs=None):
 
     where :math:`\lambda_i` are the joint eigenvalues of A and B.
     """
+
     def _single_distance_riemann(A, B):
-        dist = np.sqrt(
-           np.sum(np.log(eigvalsh(A, B))**2) 
-        )
+        dist = np.sqrt(np.sum(np.log(eigvalsh(A, B)) ** 2))
         return dist
 
     A = A.reshape((-1, *A.shape[-2:]))
@@ -146,9 +162,12 @@ def distance_riemann(A, B, n_jobs=None):
     elif B.shape[0] == 1:
         B = np.broadcast_to(B, A.shape)
 
-    d = Parallel(n_jobs=n_jobs)(delayed(_single_distance_riemann)(a, b) for a, b in zip(A, B))
+    d = Parallel(n_jobs=n_jobs)(
+        delayed(_single_distance_riemann)(a, b) for a, b in zip(A, B)
+    )
     d = np.array(d)
     return d
+
 
 def _get_sample_weight(sample_weight, N):
     r"""Get the sample weights.
@@ -160,6 +179,7 @@ def _get_sample_weight(sample_weight, N):
     if len(sample_weight) != N:
         raise ValueError("len of sample_weight must be equal to len of data.")
     return sample_weight
+
 
 def mean_riemann(covmats, tol=1e-11, maxiter=300, init=None, weights=None, n_jobs=None):
     r"""Return the mean covariance matrix according to the Riemannian metric.
@@ -211,17 +231,18 @@ def mean_riemann(covmats, tol=1e-11, maxiter=300, init=None, weights=None, n_job
         iC12 = invsqrtm(C, n_jobs=1)
 
         J = logm(np.matmul(np.matmul(iC12, covmats), iC12), n_jobs=n_jobs)
-        J = np.sum(weights[:, np.newaxis, np.newaxis]*J, axis=0)
-        crit = np.linalg.norm(J, ord='fro')
+        J = np.sum(weights[:, np.newaxis, np.newaxis] * J, axis=0)
+        crit = np.linalg.norm(J, ord="fro")
         h = nu * crit
 
-        C = C12@expm(nu*J, n_jobs=1)@C12
+        C = C12 @ expm(nu * J, n_jobs=1) @ C12
         if h < tau:
             nu = 0.95 * nu
             tau = h
         else:
             nu = 0.5 * nu
     return C
+
 
 def vectorize(Si):
     r"""vectorize tangent space points.
@@ -239,9 +260,12 @@ def vectorize(Si):
     Si = Si.reshape((-1, *Si.shape[-2:]))
     n_channels = Si.shape[-1]
     ind = np.triu_indices(n_channels, k=0)
-    coeffs = (np.sqrt(2) * np.triu(np.ones((n_channels, n_channels)), 1) + np.eye(n_channels))[ind]
-    vSi = Si[:, ind[0], ind[1]]*coeffs
+    coeffs = (
+        np.sqrt(2) * np.triu(np.ones((n_channels, n_channels)), 1) + np.eye(n_channels)
+    )[ind]
+    vSi = Si[:, ind[0], ind[1]] * coeffs
     return vSi
+
 
 def unvectorize(vSi):
     r"""Unvectorize tangent space points.
@@ -259,12 +283,16 @@ def unvectorize(vSi):
     n_trials, n_features = vSi.shape
     n_channels = int((np.sqrt(1 + 8 * n_features) - 1) / 2)
     ind = np.triu_indices(n_channels, k=0)
-    coeffs = (np.sqrt(2) * np.triu(np.ones((n_channels, n_channels)), 1) + 2*np.eye(n_channels))[ind]
+    coeffs = (
+        np.sqrt(2) * np.triu(np.ones((n_channels, n_channels)), 1)
+        + 2 * np.eye(n_channels)
+    )[ind]
     vSi = vSi / coeffs
     Si = np.zeros((n_trials, n_channels, n_channels))
     Si[:, ind[0], ind[1]] = vSi
     Si = Si + np.transpose(Si, (0, 2, 1))
     return Si
+
 
 def tangent_space(Pi, P, n_jobs=None):
     r"""Logarithm map projects SPD matrices to the tangent vectors.
@@ -288,9 +316,10 @@ def tangent_space(Pi, P, n_jobs=None):
     vSi = vectorize(Si)
     return vSi
 
+
 def untangent_space(vSi, P, n_jobs=None):
     r"""Logarithm map projects SPD matrices to the tangent vectors.
-    
+
     Parameters
     ----------
     vSi : (n_trials, n_channels*(n_channels+1)/2) array_like
@@ -310,10 +339,8 @@ def untangent_space(vSi, P, n_jobs=None):
     Pi = expmap(Si, P, n_jobs=n_jobs)
     return Pi
 
-def mdrm_kernel(X, y,
-        cov_estimator='cov',
-        weights=None,
-        n_jobs=None):
+
+def mdrm_kernel(X, y, cov_estimator="cov", weights=None, n_jobs=None):
     r"""Minimum Distance to Riemannian Mean.
 
     Parameters
@@ -338,32 +365,42 @@ def mdrm_kernel(X, y,
     Cx = covariances(X, estimator=cov_estimator, n_jobs=1)
     weights = _get_sample_weight(weights, Cx.shape[0])
 
-    Centroids =Parallel(n_jobs=n_jobs)(
-        delayed(mean_riemann)(Cx[y==label], sample_weight=weights[y==label]) for label in labels)
+    Centroids = Parallel(n_jobs=n_jobs)(
+        delayed(mean_riemann)(Cx[y == label], sample_weight=weights[y == label])
+        for label in labels
+    )
     return np.stack(Centroids)
 
+
 class MDRM(BaseEstimator, TransformerMixin, ClassifierMixin):
-    def __init__(self, cov_estimator='cov', n_jobs=None):
+    def __init__(self, cov_estimator="cov", n_jobs=None):
         self.cov_estimator = cov_estimator
         self.n_jobs = n_jobs
 
     def fit(self, X, y, weights=None):
         self.classes_ = np.unique(y)
         self.centroids_ = mdrm_kernel(
-            X, y, cov_estimator=self.cov_estimator, weights=weights, n_jobs=self.n_jobs)
+            X, y, cov_estimator=self.cov_estimator, weights=weights, n_jobs=self.n_jobs
+        )
         return self
 
     def transform(self, X):
         Cx = covariances(X, estimator=self.cov_estimator, n_jobs=1)
-        dist = np.stack([distance_riemann(Cx, centroid, n_jobs=self.n_jobs) for centroid in self.centroids_]).T
+        dist = np.stack(
+            [
+                distance_riemann(Cx, centroid, n_jobs=self.n_jobs)
+                for centroid in self.centroids_
+            ]
+        ).T
         return dist
 
     def predict(self, X):
         dist = self.transform(X)
         return self.classes_[np.argmin(dist, axis=-1)]
 
+
 class FGDA(BaseEstimator, TransformerMixin):
-    def __init__(self, cov_estimator='cov', n_jobs=None):
+    def __init__(self, cov_estimator="cov", n_jobs=None):
         self.cov_estimator = cov_estimator
         self.n_jobs = n_jobs
 
@@ -371,22 +408,22 @@ class FGDA(BaseEstimator, TransformerMixin):
         Pi = covariances(X, estimator=self.cov_estimator, n_jobs=1)
         self.P_ = mean_riemann(Pi, n_jobs=self.n_jobs)
         vSi = tangent_space(Pi, self.P_, n_jobs=self.n_jobs)
-        self.lda_ = LinearDiscriminantAnalysis(
-            solver='lsqr', shrinkage='auto')
+        self.lda_ = LinearDiscriminantAnalysis(solver="lsqr", shrinkage="auto")
         self.lda_.fit(vSi, y)
         W = self.lda_.coef_.copy()
-        self.W_ = W.T@pinv(W@W.T)@W # n_feat by n_feat
+        self.W_ = W.T @ pinv(W @ W.T) @ W  # n_feat by n_feat
         return self
 
     def transform(self, X):
         Pi = covariances(X, estimator=self.cov_estimator, n_jobs=1)
         vSi = tangent_space(Pi, self.P_, n_jobs=self.n_jobs)
-        vSi = vSi@self.W_
+        vSi = vSi @ self.W_
         Pi = untangent_space(vSi, self.P_, n_jobs=self.n_jobs)
         return Pi
 
+
 class FgMDRM(BaseEstimator, TransformerMixin, ClassifierMixin):
-    def __init__(self, cov_estimator='cov', n_jobs=None):
+    def __init__(self, cov_estimator="cov", n_jobs=None):
         self.cov_estimator = cov_estimator
         self.n_jobs = n_jobs
 
@@ -395,31 +432,40 @@ class FgMDRM(BaseEstimator, TransformerMixin, ClassifierMixin):
         self.fgda_ = FGDA(cov_estimator=self.cov_estimator, n_jobs=self.n_jobs)
         Cx = self.fgda_.fit_transform(X, y)
         weights = _get_sample_weight(weights, Cx.shape[0])
-        Centroids =Parallel(n_jobs=self.n_jobs)(
-            delayed(mean_riemann)(Cx[y==label], sample_weight=weights[y==label]) for label in self.classes_)
+        Centroids = Parallel(n_jobs=self.n_jobs)(
+            delayed(mean_riemann)(Cx[y == label], sample_weight=weights[y == label])
+            for label in self.classes_
+        )
         self.centroids_ = np.stack(Centroids)
         return self
 
     def transform(self, X):
         Cx = self.fgda_.transform(X)
-        dist = np.stack([distance_riemann(Cx, centroid, n_jobs=self.n_jobs) for centroid in self.centroids_]).T
+        dist = np.stack(
+            [
+                distance_riemann(Cx, centroid, n_jobs=self.n_jobs)
+                for centroid in self.centroids_
+            ]
+        ).T
         return dist
 
     def predict(self, X):
         dist = self.transform(X)
         return self.classes_[np.argmin(dist, axis=-1)]
 
+
 class TSClassifier(BaseEstimator, TransformerMixin, ClassifierMixin):
-    def __init__(self, cov_estimator='cov', classifier=None, n_jobs=None):
+    def __init__(self, cov_estimator="cov", classifier=None, n_jobs=None):
         self.cov_estimator = cov_estimator
         self.classifier = classifier
         self.classifier_ = None
         self.n_jobs = n_jobs
 
-        if (self.classifier is not None
-            and not isinstance(self.classifier, ClassifierMixin)):
-            raise TypeError('classifier must be a ClassifierMixin object')
-    
+        if self.classifier is not None and not isinstance(
+            self.classifier, ClassifierMixin
+        ):
+            raise TypeError("classifier must be a ClassifierMixin object")
+
     def fit(self, X, y):
         Pi = covariances(X, estimator=self.cov_estimator, n_jobs=self.n_jobs)
         self.P_ = mean_riemann(Pi, n_jobs=self.n_jobs)
@@ -441,19 +487,22 @@ class TSClassifier(BaseEstimator, TransformerMixin, ClassifierMixin):
             labels = self.classifier_.predict(vSi)
             return labels
         else:
-            raise NotImplementedError("No classifier was provided to support predict function.")
+            raise NotImplementedError(
+                "No classifier was provided to support predict function."
+            )
+
 
 class Align(BaseEstimator, TransformerMixin):
-    def __init__(self, cov_estimator='cov', align_method='euclid', n_jobs=None):
+    def __init__(self, cov_estimator="cov", align_method="euclid", n_jobs=None):
         self.cov_estimator = cov_estimator
         self.align_method = align_method
         self.n_jobs = n_jobs
 
     def fit(self, X, y=None):
         Cs = covariances(X, estimator=self.cov_estimator, n_jobs=1)
-        if self.align_method == 'euclid':
+        if self.align_method == "euclid":
             self.iC12_ = self._euclid_center(Cs)
-        elif self.align_method == 'riemann':
+        elif self.align_method == "riemann":
             self.iC12_ = self._riemann_center(Cs)
         else:
             raise ValueError("non-supported aligning method.")
@@ -473,8 +522,9 @@ class Align(BaseEstimator, TransformerMixin):
         C = mean_riemann(Cs, n_jobs=self.n_jobs)
         return invsqrtm(C)
 
+
 class AdaAlign(BaseEstimator, TransformerMixin):
-    def __init__(self, cov_estimator='cov', align_method='euclid'):
+    def __init__(self, cov_estimator="cov", align_method="euclid"):
         self.cov_estimator = cov_estimator
         self.align_method = align_method
         self.C_ = None
@@ -495,13 +545,13 @@ class AdaAlign(BaseEstimator, TransformerMixin):
         self._init_center(Cs.shape[-1])
 
         for i in range(len(X)):
-            if self.align_method == 'euclid':
+            if self.align_method == "euclid":
                 self._recursive_euclid_center(Cs[i])
-            elif self.align_method == 'riemann':
+            elif self.align_method == "riemann":
                 self._recursive_riemann_center(Cs[i])
             else:
                 raise ValueError("non-supported aligning method.")
-            X[i] = self.iC12_@X[i]
+            X[i] = self.iC12_ @ X[i]
         return X
 
     def _init_center(self, n_channels):
@@ -515,8 +565,8 @@ class AdaAlign(BaseEstimator, TransformerMixin):
             self.C_ = self.C_ * np.mean(np.diag(C))
 
         self.n_tracked_ += 1
-        alpha = 1/(self.n_tracked_)
-        self.C_ = (1-alpha)*self.C_ + alpha*C
+        alpha = 1 / (self.n_tracked_)
+        self.C_ = (1 - alpha) * self.C_ + alpha * C
         self.iC12_ = invsqrtm(self.C_)
 
     def _recursive_riemann_center(self, C):
@@ -524,6 +574,6 @@ class AdaAlign(BaseEstimator, TransformerMixin):
             self.C_ = self.C_ * np.mean(np.diag(C))
 
         self.n_tracked_ += 1
-        alpha = 1/(self.n_tracked_)
+        alpha = 1 / (self.n_tracked_)
         self.C_ = geodesic(self.C_, C, alpha)
         self.iC12_ = invsqrtm(self.C_)

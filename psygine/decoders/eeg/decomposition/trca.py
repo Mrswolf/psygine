@@ -12,11 +12,10 @@ from sklearn.base import BaseEstimator, TransformerMixin, ClassifierMixin
 from joblib import Parallel, delayed
 from .base import pearsonr, FilterBank
 
-__all__ = [
-    'trca_kernel', 'trca_feature', 'TRCA', 'FBTRCA'
-]
+__all__ = ["trca_kernel", "trca_feature", "TRCA", "FBTRCA"]
 
-def trca_kernel(X, cov_estimator='cov'):
+
+def trca_kernel(X, cov_estimator="cov"):
     r"""TRCA kernel.
 
     Parameters
@@ -45,15 +44,14 @@ def trca_kernel(X, cov_estimator='cov'):
     """
     X = np.reshape(X, (-1, *X.shape[-2:]))
     T = np.mean(X, axis=0)
-    S_bar = covariances(
-        T, estimator=cov_estimator, n_jobs=1)
-    Q = covariances(
-        X, estimator=cov_estimator, n_jobs=1)
+    S_bar = covariances(T, estimator=cov_estimator, n_jobs=1)
+    Q = covariances(X, estimator=cov_estimator, n_jobs=1)
     Q = np.mean(Q, axis=0)
     S = S_bar - Q
     D, W = eigh(S, Q)
-    D, W = D[::-1], W[:,::-1]
+    D, W = D[::-1], W[:, ::-1]
     return D, W, T
+
 
 def trca_feature(X, Ts, Ws, n_components=1, ensemble=True):
     r"""TRCA feature.
@@ -111,6 +109,7 @@ def trca_feature(X, Ts, Ws, n_components=1, ensemble=True):
     rhos = np.stack(rhos).T
     return rhos
 
+
 class TRCA(BaseEstimator, TransformerMixin, ClassifierMixin):
     r"""Task-related component analysis.
 
@@ -133,11 +132,8 @@ class TRCA(BaseEstimator, TransformerMixin, ClassifierMixin):
     ----------
     .. [1] Nakanishi, Masaki, et al. "Enhancing detection of SSVEPs for a high-speed brain speller using task-related component analysis." IEEE Transactions on Biomedical Engineering 65.1 (2017): 104-112.
     """
-    def __init__(self,
-            n_components=1,
-            cov_estimator='cov',
-            ensemble=True,
-            n_jobs=None):
+
+    def __init__(self, n_components=1, cov_estimator="cov", ensemble=True, n_jobs=None):
         self.n_components = n_components
         self.cov_estimator = cov_estimator
         self.ensemble = ensemble
@@ -156,8 +152,14 @@ class TRCA(BaseEstimator, TransformerMixin, ClassifierMixin):
         self.classes_ = np.unique(y)
         X = np.reshape(X, (-1, *X.shape[-2:]))
         X = X - np.mean(X, axis=-1, keepdims=True)
-        _, Ws, Ts = zip(*Parallel(n_jobs=self.n_jobs)(
-            delayed(partial(trca_kernel, cov_estimator=self.cov_estimator))(X[y==label]) for label in self.classes_))
+        _, Ws, Ts = zip(
+            *Parallel(n_jobs=self.n_jobs)(
+                delayed(partial(trca_kernel, cov_estimator=self.cov_estimator))(
+                    X[y == label]
+                )
+                for label in self.classes_
+            )
+        )
         self.templates_ = np.stack(Ts)
         self.Ws_ = np.stack(Ws)
         return self
@@ -178,9 +180,12 @@ class TRCA(BaseEstimator, TransformerMixin, ClassifierMixin):
         X = np.reshape(X, (-1, *X.shape[-2:]))
         X = X - np.mean(X, axis=-1, keepdims=True)
         rhos = trca_feature(
-            X, self.templates_, self.Ws_,
+            X,
+            self.templates_,
+            self.Ws_,
             n_components=self.n_components,
-            ensemble=self.ensemble)
+            ensemble=self.ensemble,
+        )
         return rhos
 
     def predict(self, X):
@@ -199,6 +204,7 @@ class TRCA(BaseEstimator, TransformerMixin, ClassifierMixin):
         feat = self.transform(X)
         labels = self.classes_[np.argmax(feat, axis=-1)]
         return labels
+
 
 class FBTRCA(FilterBank, ClassifierMixin):
     r"""Filterbank TRCA.
@@ -219,13 +225,16 @@ class FBTRCA(FilterBank, ClassifierMixin):
     n_jobs : int, optional
         The number of CPUs to use to do the computation.
     """
-    def __init__(self,
+
+    def __init__(
+        self,
         filterbank,
         n_components=1,
-        cov_estimator='cov',
+        cov_estimator="cov",
         ensemble=True,
         filter_weights=None,
-        n_jobs=None):
+        n_jobs=None,
+    ):
         self.filterbank = filterbank
         self.n_components = n_components
         self.cov_estimator = cov_estimator
@@ -233,15 +242,21 @@ class FBTRCA(FilterBank, ClassifierMixin):
         self.filter_weights = filter_weights
         self.n_jobs = n_jobs
 
-        if (self.filter_weights is not None
-            and len(self.filter_weights) != len(filterbank)):
+        if self.filter_weights is not None and len(self.filter_weights) != len(
+            filterbank
+        ):
             raise ValueError("Filter weights and filterbank should be the same length.")
 
         super().__init__(
-            TRCA(n_components=n_components, cov_estimator=cov_estimator, ensemble=ensemble),
+            TRCA(
+                n_components=n_components,
+                cov_estimator=cov_estimator,
+                ensemble=ensemble,
+            ),
             filterbank,
             concat=False,
-            n_jobs=n_jobs)
+            n_jobs=n_jobs,
+        )
 
     def fit(self, X, y):
         r"""Fit to data.
@@ -277,8 +292,8 @@ class FBTRCA(FilterBank, ClassifierMixin):
             filter_weights = self.filter_weights
 
         # bad performance for square
-        # features  = np.square(features) * filter_weights 
-        
+        # features  = np.square(features) * filter_weights
+
         # nakanishi's features
         features = features * filter_weights
         features = np.sum(features, axis=-1)

@@ -11,11 +11,10 @@ from sklearn.feature_selection import SelectKBest, mutual_info_classif
 from psygine.decoders.utils import covariances
 from .base import FilterBank
 
-__all__ = [
-    'csp_kernel', 'csp_feature', 'CSP', 'FBCSP', 'MultiCSP', 'FBMultiCSP'
-]
+__all__ = ["csp_kernel", "csp_feature", "CSP", "FBCSP", "MultiCSP", "FBMultiCSP"]
 
-def csp_kernel(X, y, cov_estimator='cov'):
+
+def csp_kernel(X, y, cov_estimator="cov"):
     r"""CSP kernel.
 
     Parameters
@@ -47,14 +46,8 @@ def csp_kernel(X, y, cov_estimator='cov'):
     if len(labels) != 2:
         raise ValueError("csp kernel is only for 2-class classification problem.")
 
-    C1 = covariances(
-        X[y==labels[0]],
-        estimator=cov_estimator,
-        n_jobs=1)
-    C2 = covariances(
-        X[y==labels[1]],
-        estimator=cov_estimator,
-        n_jobs=1)
+    C1 = covariances(X[y == labels[0]], estimator=cov_estimator, n_jobs=1)
+    C2 = covariances(X[y == labels[1]], estimator=cov_estimator, n_jobs=1)
 
     # trace normalization
     C1 = C1 / np.trace(C1, axis1=-1, axis2=-2)[..., np.newaxis, np.newaxis]
@@ -70,8 +63,9 @@ def csp_kernel(X, y, cov_estimator='cov'):
     D = np.abs(D - 0.5)
     idx = np.argsort(D)[::-1]
 
-    D, W = D[idx], W[:,idx]
+    D, W = D[idx], W[:, idx]
     return D, W
+
 
 def csp_feature(X, W, n_components=2):
     r"""CSP feature.
@@ -101,13 +95,14 @@ def csp_feature(X, W, n_components=2):
     X = np.reshape(X, (-1, *X.shape[-2:]))
     X = X - np.mean(X, axis=-1, keepdims=True)
     eps = np.finfo(X.dtype).eps
-    feat = np.matmul(W[:,:n_components].T, X)
+    feat = np.matmul(W[:, :n_components].T, X)
     # variance normalization
     feat = np.mean(np.square(feat), axis=-1)
     feat = feat / (np.sum(feat, axis=-1, keepdims=True) + eps)
     # log transformation
     feat = np.log(np.clip(feat, eps, None))
     return feat
+
 
 class CSP(BaseEstimator, TransformerMixin, ClassifierMixin):
     r"""Common spatial pattern.
@@ -130,18 +125,17 @@ class CSP(BaseEstimator, TransformerMixin, ClassifierMixin):
     ----------
     .. [1] Ramoser H, Muller-Gerking J, Pfurtscheller G. Optimal spatial filtering of single trial EEG during imagined hand movement[J]. IEEE transactions on rehabilitation engineering, 2000, 8(4): 441-446.
     """
-    def __init__(self,
-            n_components=2,
-            cov_estimator='cov',
-            classifier=None):
+
+    def __init__(self, n_components=2, cov_estimator="cov", classifier=None):
         self.n_components = n_components
         self.cov_estimator = cov_estimator
         self.classifier = classifier
         self.classifier_ = None
 
-        if (self.classifier is not None
-            and not isinstance(self.classifier, ClassifierMixin)):
-            raise TypeError('classifier must be a ClassifierMixin object')
+        if self.classifier is not None and not isinstance(
+            self.classifier, ClassifierMixin
+        ):
+            raise TypeError("classifier must be a ClassifierMixin object")
 
     def fit(self, X, y):
         r"""Fit to data.
@@ -154,14 +148,12 @@ class CSP(BaseEstimator, TransformerMixin, ClassifierMixin):
             Labels.
         """
         X = np.reshape(X, (-1, *X.shape[-2:]))
-        _, W = csp_kernel(
-            X, y, cov_estimator=self.cov_estimator)
+        _, W = csp_kernel(X, y, cov_estimator=self.cov_estimator)
         self.W_ = W
 
         if self.classifier is not None:
             self.classifier_ = clone(self.classifier)
-            feat = csp_feature(
-                X, W, n_components=self.n_components)
+            feat = csp_feature(X, W, n_components=self.n_components)
             self.classifier_.fit(feat, y)
         return self
 
@@ -200,7 +192,10 @@ class CSP(BaseEstimator, TransformerMixin, ClassifierMixin):
             labels = self.classifier_.predict(feat)
             return labels
         else:
-            raise NotImplementedError("No classifier was provided to support predict function.")
+            raise NotImplementedError(
+                "No classifier was provided to support predict function."
+            )
+
 
 class FBCSP(FilterBank, ClassifierMixin):
     r"""Filterbank CSP.
@@ -229,13 +224,16 @@ class FBCSP(FilterBank, ClassifierMixin):
     ----------
     .. [1] Ang K K, Chin Z Y, Zhang H, et al. Filter bank common spatial pattern (FBCSP) in brain-computer interface[C]//2008 IEEE International Joint Conference on Neural Networks (IEEE World Congress on Computational Intelligence). IEEE, 2008: 2390-2397.
     """
-    def __init__(self,
+
+    def __init__(
+        self,
         filterbank,
         n_components=2,
-        cov_estimator='cov',
+        cov_estimator="cov",
         classifier=None,
         n_mi_components=4,
-        n_jobs=None):
+        n_jobs=None,
+    ):
         self.filterbank = filterbank
         self.n_components = n_components
         self.n_mi_components = n_mi_components
@@ -244,18 +242,19 @@ class FBCSP(FilterBank, ClassifierMixin):
         self.classifier_ = None
         self.n_jobs = n_jobs
 
-        if (self.classifier is not None
-            and not isinstance(self.classifier, ClassifierMixin)):
-            raise TypeError('classifier must be a ClassifierMixin object')
+        if self.classifier is not None and not isinstance(
+            self.classifier, ClassifierMixin
+        ):
+            raise TypeError("classifier must be a ClassifierMixin object")
 
         super().__init__(
             CSP(
-                n_components=n_components,
-                cov_estimator=cov_estimator,
-                classifier=None),
+                n_components=n_components, cov_estimator=cov_estimator, classifier=None
+            ),
             filterbank,
             concat=True,
-            n_jobs=n_jobs)
+            n_jobs=n_jobs,
+        )
 
     def fit(self, X, y):
         r"""Fit to data.
@@ -272,8 +271,8 @@ class FBCSP(FilterBank, ClassifierMixin):
         # feature selection step
         feat = super().transform(X)
         self.selector_ = SelectKBest(
-            score_func=mutual_info_classif,
-            k=self.n_mi_components)
+            score_func=mutual_info_classif, k=self.n_mi_components
+        )
         self.selector_.fit(feat, y)
 
         if self.classifier is not None:
@@ -317,7 +316,10 @@ class FBCSP(FilterBank, ClassifierMixin):
             labels = self.classifier_.predict(feat)
             return labels
         else:
-            raise NotImplementedError("No classifier was provided to support predict function.")
+            raise NotImplementedError(
+                "No classifier was provided to support predict function."
+            )
+
 
 def _rjd(X, eps=1e-9, n_iter_max=1000):
     """Approximate joint diagonalization based on jacobi angle.
@@ -364,7 +366,6 @@ def _rjd(X, eps=1e-9, n_iter_max=1000):
             break
         for p in range(m - 1):
             for q in range(p + 1, m):
-
                 Ip = np.arange(p, nm, m)
                 Iq = np.arange(q, nm, m)
 
@@ -373,12 +374,11 @@ def _rjd(X, eps=1e-9, n_iter_max=1000):
                 gg = np.dot(g, g.T)
                 ton = gg[0, 0] - gg[1, 1]
                 toff = gg[0, 1] + gg[1, 0]
-                theta = 0.5 * np.arctan2(toff, ton +
-                                         np.sqrt(ton * ton + toff * toff))
+                theta = 0.5 * np.arctan2(toff, ton + np.sqrt(ton * ton + toff * toff))
                 c = np.cos(theta)
                 s = np.sin(theta)
                 encore = encore | (np.abs(s) > eps)
-                if (np.abs(s) > eps):
+                if np.abs(s) > eps:
                     tmp = A[:, Ip].copy()
                     A[:, Ip] = c * A[:, Ip] + s * A[:, Iq]
                     A[:, Iq] = c * A[:, Iq] - s * tmp
@@ -393,6 +393,7 @@ def _rjd(X, eps=1e-9, n_iter_max=1000):
 
     D = np.reshape(A, (m, int(nm / m), m)).transpose(1, 0, 2)
     return V, D
+
 
 def _ajd_pham(X, eps=1e-9, n_iter_max=1000):
     """Approximate joint diagonalization based on pham's algorithm.
@@ -458,16 +459,16 @@ def _ajd_pham(X, eps=1e-9, n_iter_max=1000):
 
                 decr += n_epochs * (g12 * np.conj(h12) + g21 * h21) / 2.0
 
-                tmp = 1 + 1.j * 0.5 * np.imag(h12 * h21)
-                tmp = np.real(tmp + np.sqrt(tmp ** 2 - h12 * h21))
+                tmp = 1 + 1.0j * 0.5 * np.imag(h12 * h21)
+                tmp = np.real(tmp + np.sqrt(tmp**2 - h12 * h21))
                 tau = np.array([[1, -h12 / tmp], [-h21 / tmp, 1]])
 
                 A[[ii, jj], :] = np.dot(tau, A[[ii, jj], :])
                 tmp = np.c_[A[:, Ii], A[:, Ij]]
-                tmp = np.reshape(tmp, (n_times * n_epochs, 2), order='F')
+                tmp = np.reshape(tmp, (n_times * n_epochs, 2), order="F")
                 tmp = np.dot(tmp, tau.T)
 
-                tmp = np.reshape(tmp, (n_times, n_epochs * 2), order='F')
+                tmp = np.reshape(tmp, (n_times, n_epochs * 2), order="F")
                 A[:, Ii] = tmp[:, :n_epochs]
                 A[:, Ij] = tmp[:, n_epochs:]
                 V[[ii, jj], :] = np.dot(tau, V[[ii, jj], :])
@@ -475,6 +476,7 @@ def _ajd_pham(X, eps=1e-9, n_iter_max=1000):
             break
     D = np.reshape(A, (n_times, -1, n_times)).transpose(1, 0, 2)
     return V.T, D
+
 
 def _uwedge(X, init=None, eps=1e-9, n_iter_max=1000):
     """Approximate joint diagonalization algorithm UWEDGE.
@@ -520,7 +522,7 @@ def _uwedge(X, init=None, eps=1e-9, n_iter_max=1000):
 
     if init is None:
         E, H = np.linalg.eig(M[:, 0:d])
-        W_est = np.dot(np.diag(1. / np.sqrt(np.abs(E))), H.T)
+        W_est = np.dot(np.diag(1.0 / np.sqrt(np.abs(E))), H.T)
     else:
         W_est = init
 
@@ -528,9 +530,9 @@ def _uwedge(X, init=None, eps=1e-9, n_iter_max=1000):
     Rs = np.zeros((d, L))
 
     for k in range(L):
-        ini = k*d
+        ini = k * d
         Il = np.arange(ini, ini + d)
-        M[:, Il] = 0.5*(M[:, Il] + M[:, Il].T)
+        M[:, Il] = 0.5 * (M[:, Il] + M[:, Il].T)
         Ms[:, Il] = np.dot(np.dot(W_est, M[:, Il]), W_est.T)
         Rs[:, k] = np.diag(Ms[:, Il])
 
@@ -539,19 +541,19 @@ def _uwedge(X, init=None, eps=1e-9, n_iter_max=1000):
         B = np.dot(Rs, Rs.T)
         C1 = np.zeros((d, d))
         for i in range(d):
-            C1[:, i] = np.sum(Ms[:, i:Md:d]*Rs, axis=1)
+            C1[:, i] = np.sum(Ms[:, i:Md:d] * Rs, axis=1)
 
-        D0 = B*B.T - np.outer(np.diag(B), np.diag(B))
+        D0 = B * B.T - np.outer(np.diag(B), np.diag(B))
         A0 = (C1 * B - np.dot(np.diag(np.diag(B)), C1.T)) / (D0 + np.eye(d))
         A0 += np.eye(d)
         W_est = np.linalg.solve(A0, W_est)
 
         Raux = np.dot(np.dot(W_est, M[:, 0:d]), W_est.T)
-        aux = 1./np.sqrt(np.abs(np.diag(Raux)))
+        aux = 1.0 / np.sqrt(np.abs(np.diag(Raux)))
         W_est = np.dot(np.diag(aux), W_est)
 
         for k in range(L):
-            ini = k*d
+            ini = k * d
             Il = np.arange(ini, ini + d)
             Ms[:, Il] = np.dot(np.dot(W_est, M[:, Il]), W_est.T)
             Rs[:, k] = np.diag(Ms[:, Il])
@@ -564,11 +566,9 @@ def _uwedge(X, init=None, eps=1e-9, n_iter_max=1000):
     D = np.reshape(Ms, (d, L, d)).transpose(1, 0, 2)
     return W_est.T, D
 
-_ajd_methods = {
-    'rjd': _rjd, 
-    'ajd_pham': _ajd_pham, 
-    'uwedge': _uwedge
-}
+
+_ajd_methods = {"rjd": _rjd, "ajd_pham": _ajd_pham, "uwedge": _uwedge}
+
 
 def _check_ajd_method(method):
     """Check if a given approximate joint diagonalization method is valid.
@@ -590,10 +590,13 @@ def _check_ajd_method(method):
     else:
         raise ValueError(
             """%s is not an valid method ! Valid methods are : %s or a
-             callable function""" % (method, (' , ').join(_ajd_methods.keys())))
+             callable function"""
+            % (method, (" , ").join(_ajd_methods.keys()))
+        )
     return method
 
-def ajd(X, method='uwedge'):
+
+def ajd(X, method="uwedge"):
     """Wrapper of approximate joint diagonalization methods.
 
     Parameters
@@ -602,7 +605,7 @@ def ajd(X, method='uwedge'):
         Input covariance matrices.
     method : str, default 'uwedge'
         The ajd method.
-    
+
     Returns
     -------
     D : (n_channels,) array_like
@@ -618,7 +621,8 @@ def ajd(X, method='uwedge'):
     W = W[:, idx]
     return D, W
 
-def multicsp_kernel(X, y, cov_estimator='cov', ajd_method='ajd_pham'):
+
+def multicsp_kernel(X, y, cov_estimator="cov", ajd_method="ajd_pham"):
     r"""Grosse-Wentrup Multiclass CSP.
 
     Parameters
@@ -646,7 +650,7 @@ def multicsp_kernel(X, y, cov_estimator='cov', ajd_method='ajd_pham'):
     labels = np.unique(y)
     C = covariances(X, estimator=cov_estimator, n_jobs=1)
     C = C / np.trace(C, axis1=-1, axis2=-2)[:, np.newaxis, np.newaxis]
-    Cx = np.stack([np.mean(C[y==label], axis=0) for label in labels], axis=0)
+    Cx = np.stack([np.mean(C[y == label], axis=0) for label in labels], axis=0)
     D, W = ajd(Cx, method=ajd_method)
     W = W / np.sqrt(D)
 
@@ -657,10 +661,10 @@ def multicsp_kernel(X, y, cov_estimator='cov', ajd_method='ajd_pham'):
         a = 0
         b = 0
         for i in range(len(labels)):
-            tmp = W[:, j].T@Cx[i]@W[:, j]
+            tmp = W[:, j].T @ Cx[i] @ W[:, j]
             a += Pc[i] * np.log(np.sqrt(tmp))
-            b += Pc[i] * (tmp ** 2 - 1)
-        mi = - (a + (3.0 / 16) * (b ** 2))
+            b += Pc[i] * (tmp**2 - 1)
+        mi = -(a + (3.0 / 16) * (b**2))
         mutual_info.append(mi)
     mutual_info = np.array(mutual_info)
     idx = np.argsort(mutual_info)[::-1]
@@ -668,6 +672,7 @@ def multicsp_kernel(X, y, cov_estimator='cov', ajd_method='ajd_pham'):
     mutual_info = mutual_info[idx]
     D = D[idx]
     return mutual_info, W
+
 
 class MultiCSP(BaseEstimator, TransformerMixin, ClassifierMixin):
     r"""Multiclass common spatial pattern.
@@ -692,20 +697,20 @@ class MultiCSP(BaseEstimator, TransformerMixin, ClassifierMixin):
     ----------
     .. [1] Grosse-Wentrup, Moritz, and Martin Buss. "Multiclass common spatial patterns and information theoretic feature extraction." Biomedical Engineering, IEEE Transactions on 55, no. 8 (2008): 1991-2000.
     """
-    def __init__(self,
-            n_components=2,
-            cov_estimator='cov',
-            ajd_method='uwedge',
-            classifier=None):
+
+    def __init__(
+        self, n_components=2, cov_estimator="cov", ajd_method="uwedge", classifier=None
+    ):
         self.n_components = n_components
         self.cov_estimator = cov_estimator
         self.ajd_method = ajd_method
         self.classifier = classifier
         self.classifier_ = None
 
-        if (self.classifier is not None
-            and not isinstance(self.classifier, ClassifierMixin)):
-            raise TypeError('classifier must be a ClassifierMixin object')
+        if self.classifier is not None and not isinstance(
+            self.classifier, ClassifierMixin
+        ):
+            raise TypeError("classifier must be a ClassifierMixin object")
 
     def fit(self, X, y):
         r"""Fit to data.
@@ -719,13 +724,13 @@ class MultiCSP(BaseEstimator, TransformerMixin, ClassifierMixin):
         """
         X = np.reshape(X, (-1, *X.shape[-2:]))
         _, W = multicsp_kernel(
-            X, y, cov_estimator=self.cov_estimator, ajd_method=self.ajd_method)
+            X, y, cov_estimator=self.cov_estimator, ajd_method=self.ajd_method
+        )
         self.W_ = W
 
         if self.classifier is not None:
             self.classifier_ = clone(self.classifier)
-            feat = csp_feature(
-                X, W, n_components=self.n_components)
+            feat = csp_feature(X, W, n_components=self.n_components)
             self.classifier_.fit(feat, y)
         return self
 
@@ -764,7 +769,10 @@ class MultiCSP(BaseEstimator, TransformerMixin, ClassifierMixin):
             labels = self.classifier_.predict(feat)
             return labels
         else:
-            raise NotImplementedError("No classifier was provided to support predict function.")
+            raise NotImplementedError(
+                "No classifier was provided to support predict function."
+            )
+
 
 class FBMultiCSP(FilterBank, ClassifierMixin):
     r"""Filterbank MultiCSP.
@@ -796,14 +804,17 @@ class FBMultiCSP(FilterBank, ClassifierMixin):
     .. [1] Ang K K, Chin Z Y, Zhang H, et al. Filter bank common spatial pattern (FBCSP) in brain-computer interface[C]//2008 IEEE International Joint Conference on Neural Networks (IEEE World Congress on Computational Intelligence). IEEE, 2008: 2390-2397.
     .. [2] Grosse-Wentrup, Moritz, and Martin Buss. "Multiclass common spatial patterns and information theoretic feature extraction." Biomedical Engineering, IEEE Transactions on 55, no. 8 (2008): 1991-2000.
     """
-    def __init__(self,
+
+    def __init__(
+        self,
         filterbank,
         n_components=2,
-        cov_estimator='cov',
-        ajd_method='uwedge',
+        cov_estimator="cov",
+        ajd_method="uwedge",
         classifier=None,
         n_mi_components=4,
-        n_jobs=None):
+        n_jobs=None,
+    ):
         self.filterbank = filterbank
         self.n_components = n_components
         self.n_mi_components = n_mi_components
@@ -813,19 +824,22 @@ class FBMultiCSP(FilterBank, ClassifierMixin):
         self.classifier_ = None
         self.n_jobs = n_jobs
 
-        if (self.classifier is not None
-            and not isinstance(self.classifier, ClassifierMixin)):
-            raise TypeError('classifier must be a ClassifierMixin object')
-            
+        if self.classifier is not None and not isinstance(
+            self.classifier, ClassifierMixin
+        ):
+            raise TypeError("classifier must be a ClassifierMixin object")
+
         super().__init__(
             MultiCSP(
                 n_components=n_components,
                 cov_estimator=cov_estimator,
                 ajd_method=ajd_method,
-                classifier=None),
+                classifier=None,
+            ),
             filterbank,
             concat=True,
-            n_jobs=n_jobs)
+            n_jobs=n_jobs,
+        )
 
     def fit(self, X, y):
         r"""Fit to data.
@@ -842,8 +856,8 @@ class FBMultiCSP(FilterBank, ClassifierMixin):
         # feature selection step
         feat = super().transform(X)
         self.selector_ = SelectKBest(
-            score_func=mutual_info_classif,
-            k=self.n_mi_components)
+            score_func=mutual_info_classif, k=self.n_mi_components
+        )
         self.selector_.fit(feat, y)
 
         if self.classifier is not None:
@@ -887,5 +901,6 @@ class FBMultiCSP(FilterBank, ClassifierMixin):
             labels = self.classifier_.predict(feat)
             return labels
         else:
-            raise NotImplementedError("No classifier was provided to support predict function.")
-
+            raise NotImplementedError(
+                "No classifier was provided to support predict function."
+            )

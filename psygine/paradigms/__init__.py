@@ -1,1 +1,1 @@
-from .eeg_paradigms import * 
+from .eeg_paradigms import *

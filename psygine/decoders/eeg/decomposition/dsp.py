@@ -11,11 +11,10 @@ from sklearn.base import BaseEstimator, TransformerMixin, ClassifierMixin
 from joblib import Parallel, delayed
 from .base import pearsonr, FilterBank
 
-__all__ = [
-    'dsp_kernel', 'dsp_feature', 'DSP', 'FBDSP'
-]
+__all__ = ["dsp_kernel", "dsp_feature", "DSP", "FBDSP"]
 
-def dsp_kernel(X, y, cov_estimator='cov'):
+
+def dsp_kernel(X, y, cov_estimator="cov"):
     r"""DSP kernel.
 
     Parameters
@@ -48,24 +47,33 @@ def dsp_kernel(X, y, cov_estimator='cov'):
     X = X - np.mean(X, axis=-1, keepdims=True)
     labels = np.unique(y)
     # the normalized weight of each class
-    weights = np.array([np.sum(y==label) for label in labels])
+    weights = np.array([np.sum(y == label) for label in labels])
     weights = weights / np.sum(weights)
     # average template of all trials
     M = np.mean(X, axis=0)
     # class conditional template
-    Ms = np.stack([np.mean(X[y==label], axis=0) for label in labels])
-    Ss = np.stack([
-        np.sum(covariances(X[y==label] - Ms[i], estimator=cov_estimator, n_jobs=1), axis=0) for i, label in enumerate(labels)], axis=-1)
+    Ms = np.stack([np.mean(X[y == label], axis=0) for label in labels])
+    Ss = np.stack(
+        [
+            np.sum(
+                covariances(X[y == label] - Ms[i], estimator=cov_estimator, n_jobs=1),
+                axis=0,
+            )
+            for i, label in enumerate(labels)
+        ],
+        axis=-1,
+    )
 
     # within-class scatter matrix
     Sw = np.sum(Ss * weights, axis=-1)
     # between-class scatter matrix
-    Sb = covariances(Ms-M, estimator=cov_estimator, n_jobs=1)
+    Sb = covariances(Ms - M, estimator=cov_estimator, n_jobs=1)
     Sb = np.sum(Sb * weights[:, np.newaxis, np.newaxis], axis=0)
 
     D, W = eigh(Sb, Sw)
-    D, W = D[::-1], W[:,::-1]
+    D, W = D[::-1], W[:, ::-1]
     return D, W, M
+
 
 def dsp_feature(X, W, M, n_components=1):
     """DSP feature.
@@ -85,7 +93,7 @@ def dsp_feature(X, W, M, n_components=1):
     -------
     (n_trials, n_components, n_samples) array_like
         DSP features.
- 
+
     References
     ----------
     .. [1] Liao, Xiang, et al. "Combining spatial filters for the classification of single-trial EEG in a finger movement task." IEEE Transactions on Biomedical Engineering 54.5 (2007): 821-831.
@@ -94,6 +102,7 @@ def dsp_feature(X, W, M, n_components=1):
     X = X - np.mean(X, axis=-1, keepdims=True)
     feat = np.matmul(W[:, :n_components].T, X - M)
     return feat
+
 
 class DSP(BaseEstimator, TransformerMixin, ClassifierMixin):
     r"""Discriminative spatial patterns.
@@ -116,10 +125,8 @@ class DSP(BaseEstimator, TransformerMixin, ClassifierMixin):
     ----------
     .. [1] Liao, Xiang, et al. "Combining spatial filters for the classification of single-trial EEG in a finger movement task." IEEE Transactions on Biomedical Engineering 54.5 (2007): 821-831.
     """
-    def __init__(self,
-            n_components=1,
-            cov_estimator='cov',
-            transform_method='corr'):
+
+    def __init__(self, n_components=1, cov_estimator="cov", transform_method="corr"):
         self.n_components = n_components
         self.cov_estimator = cov_estimator
         self.transform_method = transform_method
@@ -141,8 +148,15 @@ class DSP(BaseEstimator, TransformerMixin, ClassifierMixin):
         _, W, M = dsp_kernel(X, y, cov_estimator=self.cov_estimator)
         self.W_ = W
         self.M_ = M
-        self.templates_ = np.stack([
-            np.mean(dsp_feature(X[y==label], W, M, n_components=W.shape[1]), axis=0) for label in self.classes_], axis=0)
+        self.templates_ = np.stack(
+            [
+                np.mean(
+                    dsp_feature(X[y == label], W, M, n_components=W.shape[1]), axis=0
+                )
+                for label in self.classes_
+            ],
+            axis=0,
+        )
         return self
 
     def _pearson_transform(self, X, T):
@@ -173,10 +187,10 @@ class DSP(BaseEstimator, TransformerMixin, ClassifierMixin):
 
         features = dsp_feature(X, self.W_, self.M_, n_components=self.n_components)
 
-        if self.transform_method == 'mean':
+        if self.transform_method == "mean":
             return np.mean(features, axis=-1)
-        elif self.transform_method == 'corr':
-            T = self.templates_[:,:self.n_components,:]
+        elif self.transform_method == "corr":
+            T = self.templates_[:, : self.n_components, :]
             return self._pearson_transform(features, T)
         else:
             raise ValueError("non-supported transform method")
@@ -195,11 +209,12 @@ class DSP(BaseEstimator, TransformerMixin, ClassifierMixin):
             Class labels.
         """
         feat = self.transform(X)
-        if self.transform_method == 'corr':
+        if self.transform_method == "corr":
             labels = self.classes_[np.argmax(feat, axis=-1)]
         else:
             raise NotImplementedError
         return labels
+
 
 class FBDSP(FilterBank, ClassifierMixin):
     r"""Filterbank DSP.
@@ -221,13 +236,16 @@ class FBDSP(FilterBank, ClassifierMixin):
     n_jobs : int, optional
         The number of CPUs to use to do the computation.
     """
-    def __init__(self,
+
+    def __init__(
+        self,
         filterbank,
         n_components=1,
-        cov_estimator='cov',
-        transform_method='corr',
+        cov_estimator="cov",
+        transform_method="corr",
         filter_weights=None,
-        n_jobs=None):
+        n_jobs=None,
+    ):
         self.filterbank = filterbank
         self.n_components = n_components
         self.cov_estimator = cov_estimator
@@ -235,15 +253,21 @@ class FBDSP(FilterBank, ClassifierMixin):
         self.filter_weights = filter_weights
         self.n_jobs = n_jobs
 
-        if (self.filter_weights is not None
-            and len(self.filter_weights) != len(filterbank)):
+        if self.filter_weights is not None and len(self.filter_weights) != len(
+            filterbank
+        ):
             raise ValueError("Filter weights and filterbank should be the same length.")
 
         super().__init__(
-            DSP(n_components=n_components, cov_estimator=cov_estimator, transform_method=transform_method),
+            DSP(
+                n_components=n_components,
+                cov_estimator=cov_estimator,
+                transform_method=transform_method,
+            ),
             filterbank,
             concat=False,
-            n_jobs=n_jobs)
+            n_jobs=n_jobs,
+        )
 
     def fit(self, X, y):
         r"""Fit to data.
@@ -277,8 +301,8 @@ class FBDSP(FilterBank, ClassifierMixin):
             filter_weights = np.ones(len(self.filterbank))
         else:
             filter_weights = self.filter_weights
-        if self.transform_method == 'corr':
-            features  = np.square(features) * filter_weights
+        if self.transform_method == "corr":
+            features = np.square(features) * filter_weights
         features = np.sum(features, axis=-1)
         return features
 

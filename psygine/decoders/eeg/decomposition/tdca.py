@@ -10,9 +10,7 @@ from .dsp import dsp_kernel, dsp_feature
 from .base import pearsonr, FilterBank
 from sklearn.base import BaseEstimator, TransformerMixin, ClassifierMixin
 
-__all__ = [
-    'tdca_kernel', 'tdca_feature', 'TDCA', 'FBTDCA'
-]
+__all__ = ["tdca_kernel", "tdca_feature", "TDCA", "FBTDCA"]
 
 
 def _proj_ref(Yf):
@@ -28,9 +26,10 @@ def _proj_ref(Yf):
     P : (n_samples, n_samples) array_like
         Projection matrix.
     """
-    Q, _ = qr(Yf.T, mode='economic')
-    P = Q@Q.T
+    Q, _ = qr(Yf.T, mode="economic")
+    P = Q @ Q.T
     return P
+
 
 def _aug_2(X, n_samples, l, P, training=True):
     r"""Augment EEG signal.
@@ -53,22 +52,25 @@ def _aug_2(X, n_samples, l, P, training=True):
     """
     X = X.reshape((-1, *X.shape[-2:]))
     n_trials, n_channels, n_points = X.shape
-    aug_X = np.zeros((n_trials, (l+1)*n_channels, n_samples))
+    aug_X = np.zeros((n_trials, (l + 1) * n_channels, n_samples))
     if training:
-        if n_points < l+n_samples:
+        if n_points < l + n_samples:
             raise ValueError("the length of X should be larger than l+n_samples.")
-        for i in range(l+1):
-            aug_X[:, i*n_channels:(i+1)*n_channels, :] = X[..., i:i+n_samples]
+        for i in range(l + 1):
+            aug_X[:, i * n_channels : (i + 1) * n_channels, :] = X[
+                ..., i : i + n_samples
+            ]
     else:
-        for i in range(l+1):
-            aug_X[:, i*n_channels:(i+1)*n_channels, :n_samples-i] = X[..., i:n_samples]
-    aug_Xp = aug_X@P
+        for i in range(l + 1):
+            aug_X[:, i * n_channels : (i + 1) * n_channels, : n_samples - i] = X[
+                ..., i:n_samples
+            ]
+    aug_Xp = aug_X @ P
     aug_X = np.concatenate([aug_X, aug_Xp], axis=-1)
     return aug_X
 
-def tdca_kernel(
-    X, y, Yf, l,
-    cov_estimator='cov'):
+
+def tdca_kernel(X, y, Yf, l, cov_estimator="cov"):
     r"""TDCA kernel.
 
     Parameters
@@ -108,24 +110,27 @@ def tdca_kernel(
     P = np.stack([_proj_ref(Yf[i]) for i in range(len(labels))])
     aug_X, aug_Y = [], []
     for i, label in enumerate(labels):
-        aug_X.append(
-            _aug_2(
-                X[y==label], n_samples, l, P[i], training=True))
-        aug_Y.append(y[y==label])
+        aug_X.append(_aug_2(X[y == label], n_samples, l, P[i], training=True))
+        aug_Y.append(y[y == label])
 
     aug_X = np.concatenate(aug_X, axis=0)
     aug_Y = np.concatenate(aug_Y, axis=0)
 
     D, W, M = dsp_kernel(aug_X, aug_Y, cov_estimator=cov_estimator)
 
-    Mc = np.stack([
-            np.mean(dsp_feature(aug_X[aug_Y==label], W, M, n_components=W.shape[-1]), axis=0) for label in labels
-            ])
+    Mc = np.stack(
+        [
+            np.mean(
+                dsp_feature(aug_X[aug_Y == label], W, M, n_components=W.shape[-1]),
+                axis=0,
+            )
+            for label in labels
+        ]
+    )
     return D, W, M, P, Mc
 
-def tdca_feature(
-    X, Mc, W, M, P, l,
-    n_components=1):
+
+def tdca_feature(X, Mc, W, M, P, l, n_components=1):
     """TDCA feature.
 
     Parameters
@@ -160,13 +165,15 @@ def tdca_feature(
     rhos = []
     for Xk, Pi in zip(Mc, P):
         a = dsp_feature(
-                _aug_2(X, n_samples, l, Pi, training=False), W, M, n_components=n_components)
+            _aug_2(X, n_samples, l, Pi, training=False), W, M, n_components=n_components
+        )
         b = Xk[:n_components, :]
         a = np.reshape(a, (a.shape[0], -1))
         b = np.reshape(b, (1, -1))
         rhos.append(pearsonr(a, b))
     rhos = np.stack(rhos).T
     return rhos
+
 
 class TDCA(BaseEstimator, TransformerMixin, ClassifierMixin):
     r"""Task-discriminant component analysis.
@@ -190,11 +197,8 @@ class TDCA(BaseEstimator, TransformerMixin, ClassifierMixin):
     ----------
     .. [1] Liu, Bingchuan, et al. "Improving the performance of individually calibrated ssvep-bci by task-discriminant component analysis." IEEE Transactions on Neural Systems and Rehabilitation Engineering 29 (2021): 1998-2007.
     """
-    def __init__(self,
-            l,
-            Yf,
-            n_components=1,
-            cov_estimator='cov'):
+
+    def __init__(self, l, Yf, n_components=1, cov_estimator="cov"):
         self.l = l
         self.Yf = Yf
         self.n_components = n_components
@@ -212,9 +216,10 @@ class TDCA(BaseEstimator, TransformerMixin, ClassifierMixin):
         """
         self.classes_ = np.unique(y)
         _, self.W_, self.M_, self.P_, self.Mc_ = tdca_kernel(
-            X, y, self.Yf, self.l, cov_estimator=self.cov_estimator)
+            X, y, self.Yf, self.l, cov_estimator=self.cov_estimator
+        )
         return self
- 
+
     def transform(self, X):
         r"""Transform data.
 
@@ -229,8 +234,14 @@ class TDCA(BaseEstimator, TransformerMixin, ClassifierMixin):
             TDCA correlation features.
         """
         rhos = tdca_feature(
-            X, self.Mc_, self.W_, self.M_, self.P_, self.l,
-            n_components=self.n_components)
+            X,
+            self.Mc_,
+            self.W_,
+            self.M_,
+            self.P_,
+            self.l,
+            n_components=self.n_components,
+        )
         return rhos
 
     def predict(self, X):
@@ -249,6 +260,7 @@ class TDCA(BaseEstimator, TransformerMixin, ClassifierMixin):
         feat = self.transform(X)
         labels = self.classes_[np.argmax(feat, axis=-1)]
         return labels
+
 
 class FBTDCA(FilterBank, ClassifierMixin):
     r"""Filterbank TDCA.
@@ -271,14 +283,17 @@ class FBTDCA(FilterBank, ClassifierMixin):
     n_jobs : int, optional
         The number of CPUs to use to do the computation.
     """
-    def __init__(self,
+
+    def __init__(
+        self,
         filterbank,
         l,
         Yf,
         n_components=1,
-        cov_estimator='cov',
+        cov_estimator="cov",
         filter_weights=None,
-        n_jobs=None):
+        n_jobs=None,
+    ):
         self.filterbank = filterbank
         self.l = l
         self.Yf = Yf
@@ -287,15 +302,17 @@ class FBTDCA(FilterBank, ClassifierMixin):
         self.filter_weights = filter_weights
         self.n_jobs = n_jobs
 
-        if (self.filter_weights is not None
-            and len(self.filter_weights) != len(filterbank)):
+        if self.filter_weights is not None and len(self.filter_weights) != len(
+            filterbank
+        ):
             raise ValueError("Filter weights and filterbank should be the same length.")
 
         super().__init__(
             TDCA(l, Yf, n_components=n_components, cov_estimator=cov_estimator),
             filterbank,
             concat=False,
-            n_jobs=n_jobs)
+            n_jobs=n_jobs,
+        )
 
     def fit(self, X, y):
         r"""Fit to data.

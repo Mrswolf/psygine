@@ -7,6 +7,7 @@
 """
 import weakref
 
+
 class RemovableHandle:
     r"""
     A handle which provides the capability to remove a hook.
@@ -25,9 +26,7 @@ class RemovableHandle:
         RemovableHandle.next_id += 1
 
         self.extra_dict_ref = (
-            weakref.ref(extra_dict)
-            if extra_dict is not None
-            else None
+            weakref.ref(extra_dict) if extra_dict is not None else None
         )
 
     def remove(self):

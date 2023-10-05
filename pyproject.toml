@@ -31,7 +31,8 @@ dependencies = [
   "mat73",
   "py7zr",
   "nibabel",
-  "pillow"
+  "pillow",
+  "opencv-python"
 ]
 
 [project.urls]
