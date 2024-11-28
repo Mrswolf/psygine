@@ -259,30 +259,36 @@ class SsvepEegDataset(BaseEegDataset):
 
         Parameters
         ----------
-        event : str
+        event : str or list of str
             Event name.
 
         Returns
         -------
-        float
+        float or list of float
             Stimuli frequency.
         """
-        return self._freq_phase_table[event][0]
+        if isinstance(event, str):
+            return self._freq_phase_table[event][0]
+        elif isinstance(event, list):
+            return [self._freq_phase_table[e][0] for e in event]
 
     def get_event_phase(self, event):
         r"""Get event phase.
 
         Parameters
         ----------
-        event : str
+        event : str or list of str
             Event name.
 
         Returns
         -------
-        float
+        float or list of float
             Stimuli phase.
         """
-        return self._freq_phase_table[event][1]
+        if isinstance(event, str):
+            return self._freq_phase_table[event][1]
+        elif isinstance(event, list):
+            return [self._freq_phase_table[e][1] for e in event]
 
 
 class MiEegDataset(BaseEegDataset):

@@ -37,7 +37,8 @@ class BaseEegParadigm(BaseParadigm):
     dataset_hooks : bool
         Whether to use default hooks from the dataset, default True.
         However, any user defined hook would override the dataset default hook.
-
+    label_transform : bool
+        Whether to encode labels with value between 0 and n_classes-1, default False.
     Attributes
     ----------
     uid : str
@@ -52,6 +53,7 @@ class BaseEegParadigm(BaseParadigm):
         intervals=None,
         srate=None,
         dataset_hooks=True,
+        label_transform=False  
     ):
         super().__init__(uid)
         if channels is not None:
@@ -61,6 +63,7 @@ class BaseEegParadigm(BaseParadigm):
         self._paradigm_intervals = intervals
         self._paradigm_srate = srate
         self._dataset_hooks = dataset_hooks
+        self.label_transform = label_transform
         self._raw_hooks = OrderedDict()
         self._epoch_hooks = OrderedDict()
         self._array_hooks = OrderedDict()
@@ -151,7 +154,8 @@ class BaseEegParadigm(BaseParadigm):
             self._paradigm_srate,
         )
 
-        le = LabelEncoder().fit(events)
+        if self.label_transform:
+            le = LabelEncoder().fit(events)
 
         rawdata = dataset.get_rawdata(subject_ids=[subject_id])[
             "subject_{:d}".format(subject_id)
@@ -229,7 +233,10 @@ class BaseEegParadigm(BaseParadigm):
                         epoch = epoch.resample(srate, verbose=False)
 
                     X = epoch[event].get_data() * 1e6  # default micro-volt
-                    y = le.transform([event] * len(X))
+                    if self.label_transform:
+                        y = le.transform([event] * len(X))
+                    else:
+                        y = np.ones((len(X)), np.int64) * dataset.get_event_id(event)
                     meta = pd.DataFrame(
                         {
                             "subject": ["subject_{:d}".format(subject_id)] * len(X),
@@ -237,6 +244,7 @@ class BaseEegParadigm(BaseParadigm):
                             "run": [run_id] * len(X),
                             "trial": epoch[event].selection,
                             "event": [event] * len(X),
+                            "event_id": y,
                             "dataset": [dataset.uid] * len(X),
                         }
                     )
@@ -404,6 +412,7 @@ class MiEegParadigm(BaseEegParadigm):
             intervals=intervals,
             srate=srate,
             dataset_hooks=dataset_hooks,
+            label_transform=True
         )
 
 
@@ -442,4 +451,5 @@ class SsvepEegParadigm(BaseEegParadigm):
             intervals=intervals,
             srate=srate,
             dataset_hooks=dataset_hooks,
+            label_transform=True
         )

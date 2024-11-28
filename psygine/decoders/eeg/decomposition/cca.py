@@ -4,6 +4,7 @@
 # License: MIT License
 from functools import partial
 import numpy as np
+from scipy.linalg import eigh, pinv
 from sklearn.base import BaseEstimator, TransformerMixin, ClassifierMixin, clone
 from sklearn.cross_decomposition import CCA
 from joblib import Parallel, delayed
@@ -19,7 +20,7 @@ __all__ = [
     "FBECCA",
 ]
 
-
+# worse performance
 def cca_kernel(X, Yf, n_components=1):
     r"""Naive CCA kernel.
 
@@ -43,6 +44,31 @@ def cca_kernel(X, Yf, n_components=1):
     est.fit(X.T, Yf.T)
     U = est.x_weights_
     V = est.y_weights_
+    return U, V
+
+
+def cca_kernel2(X, Yf, n_components=1):
+    r"""Explicit CCA kernel.
+
+    Parameters
+    ----------
+    X : (n_channels, n_samples) array_like
+        EEG signal.
+    Yf : (2*n_harmonics, n_samples) array_like
+        Reference signal.
+
+    Returns
+    -------
+    U : (n_channels, n_components) array_like
+        The left singular vectors.
+    V : (2*n_harmonics, n_components) array_like
+        The right singular vectors.
+    """
+    [S, V] = eigh(Yf@X.T@pinv(X@X.T)@X@Yf.T, Yf@Yf.T)
+    ind = np.argsort(S)[::-1]
+    S, V = S[ind], V[:, ind]
+    V = V[:, :n_components]
+    U = pinv(X@X.T)@X@Yf.T@V@np.diag(1/np.sqrt(S[:n_components]))
     return U, V
 
 
@@ -199,9 +225,12 @@ class FBSCCA(FilterBank, ClassifierMixin):
 
 
 def _ecca_feature(X, T, Yf, n_components=1):
+    X = X - np.mean(X, axis=-1, keepdims=True)
+    Yf = Yf - np.mean(Yf, axis=-1, keepdims=True)
+    T = T - np.mean(T, axis=-1, keepdims=True)
     rhos = []
     # 14a, 14d
-    U1, V1 = cca_kernel(X, Yf, n_components=n_components)
+    U1, V1 = cca_kernel2(X, Yf, n_components=n_components)
     a = U1.T @ X
     b = V1.T @ Yf
     a, b = np.reshape(a, (-1)), np.reshape(b, (-1))
@@ -210,14 +239,18 @@ def _ecca_feature(X, T, Yf, n_components=1):
     b = U1.T @ T
     a, b = np.reshape(a, (-1)), np.reshape(b, (-1))
     rhos.append(pearsonr(a, b))
-    # 14b
-    U2, _ = cca_kernel(X, T)
+    # 14b, 14e
+    U2, V2 = cca_kernel2(X, T, n_components=n_components)
     a = U2.T @ X
     b = U2.T @ T
     a, b = np.reshape(a, (-1)), np.reshape(b, (-1))
     rhos.append(pearsonr(a, b))
+    a = U2.T @ T
+    b = V2.T @ T
+    a, b = np.reshape(a, (-1)), np.reshape(b, (-1))
+    rhos.append(pearsonr(a, b))
     # 14c
-    U3, _ = cca_kernel(T, Yf)
+    U3, _ = cca_kernel2(T, Yf, n_components=n_components)
     a = U3.T @ X
     b = U3.T @ T
     a, b = np.reshape(a, (-1)), np.reshape(b, (-1))
@@ -243,7 +276,6 @@ def ecca_feature(X, T, Yf, n_components=1, n_jobs=None):
         for t, yf in zip(T, Yf)
     )
     rhos = np.reshape(rhos, (X.shape[0], Yf.shape[0]))
-
     return rhos
 
 
