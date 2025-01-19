@@ -1,0 +1,1 @@
+from .gopro import GoProTrainDataset, GoProTestDataset

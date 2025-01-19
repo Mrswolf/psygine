@@ -27,6 +27,8 @@ class BaseEegDataset(BaseDataset):
         A list of available channel names.
     srate : int or float
         The sampling rate of the dataset.
+    local_path: str, optional
+        The local path to store remote data.
 
     Attributes
     ----------
@@ -48,13 +50,14 @@ class BaseEegDataset(BaseDataset):
         The sampling rate of the dataset.
     """
 
-    def __init__(self, uid, subjects, paradigms, events, channels, srate):
+    def __init__(self, uid, subjects, paradigms, events, channels, srate, local_path=None):
         super().__init__(uid)
         self._subject_ids = subjects
         self._valid_paradigms = paradigms
         self._dataset_events = events
         self._dataset_channels = [ch.upper() for ch in channels]
         self._srate = srate
+        self.local_path = local_path
 
     @property
     def subjects(self):
@@ -84,8 +87,11 @@ class BaseEegDataset(BaseDataset):
     def srate(self):
         return self._srate
 
+    def __len__(self):
+        return len(self.subjects)
+
     @abstractmethod
-    def data_path(self, subject_id, local_path=None, force_update=False, proxies=None):
+    def _data_path(self, subject_id, local_path=None, force_update=False, proxies=None):
         r"""Mapping remote data to local and return the local file path.
 
         Parameters
@@ -101,7 +107,22 @@ class BaseEegDataset(BaseDataset):
             Proxy settings from the Request package.
         """
 
-    @abstractmethod
+    def __getitem__(self, subject_id):
+        r"""Get a single subject's raw data.
+
+        Parameters
+        ----------
+        subject_id : int
+            The subject id.
+
+        Returns
+        -------
+        dict
+            A dictionary containing raw data, which are structured in session->run order.
+        """
+        return self._get_single_subject_data(subject_id)
+
+    @abstractmethod()
     def _get_single_subject_data(self, subject_id):
         r"""Get a single subject's raw data.
 
@@ -130,19 +151,12 @@ class BaseEegDataset(BaseDataset):
             A dictionary containing raw data, which are structured in subject->session->run order.
         """
         if subject_ids is None:
-            # use all subjects if not provided
             subject_ids = self.subjects
-        else:
-            # else check if the subject is valid
-            for subject_id in subject_ids:
-                if subject_id not in self.subjects:
-                    raise ValueError("Invalid subject {}.".format(subject_id))
-
-        rawdata = dict()
         for subject_id in subject_ids:
-            rawdata["subject_{:d}".format(subject_id)] = self._get_single_subject_data(
-                subject_id
-            )
+            if subject_id not in self.subjects:
+                raise ValueError("Invalid subject {}.".format(subject_id))
+            
+        rawdata = super().get_rawdata(subject_ids)
         return rawdata
 
     def download_all(self, local_path=None, force_update=False, proxies=None):
@@ -158,10 +172,13 @@ class BaseEegDataset(BaseDataset):
         proxies : dict
             Proxy settings from the Request package.
         """
+        if local_path is not None:
+            self.local_path = local_path
+        
         for subject_id in self.subjects:
             self.data_path(
                 subject_id,
-                local_path=local_path,
+                local_path=self.local_path,
                 force_update=force_update,
                 proxies=proxies,
             )
@@ -229,6 +246,8 @@ class SsvepEegDataset(BaseEegDataset):
         The sampling rate of the dataset.
     freq_phase_table : dict
         A dictionary containing frequencies and phases.
+    local_path: str, optional
+        The local path to store remote data.
 
     Attributes
     ----------
@@ -250,8 +269,8 @@ class SsvepEegDataset(BaseEegDataset):
         The sampling rate of the dataset.
     """
 
-    def __init__(self, uid, subjects, events, channels, srate, freq_phase_table):
-        super().__init__(uid, subjects, ["ssvep-eeg"], events, channels, srate)
+    def __init__(self, uid, subjects, events, channels, srate, freq_phase_table, local_path=None):
+        super().__init__(uid, subjects, ["ssvep-eeg"], events, channels, srate, local_path=local_path)
         self._freq_phase_table = freq_phase_table
 
     def get_event_frequency(self, event):
@@ -308,6 +327,8 @@ class MiEegDataset(BaseEegDataset):
         The sampling rate of the dataset.
     freq_phase_table : dict
         A dictionary containing frequencies and phases.
+    local_path: str, optional
+        The local path to store remote data.
 
     Attributes
     ----------
@@ -329,5 +350,5 @@ class MiEegDataset(BaseEegDataset):
         The sampling rate of the dataset.
     """
 
-    def __init__(self, uid, subjects, events, channels, srate):
-        super().__init__(uid, subjects, ["mi-eeg"], events, channels, srate)
+    def __init__(self, uid, subjects, events, channels, srate, local_path=None):
+        super().__init__(uid, subjects, ["mi-eeg"], events, channels, srate, local_path=local_path)

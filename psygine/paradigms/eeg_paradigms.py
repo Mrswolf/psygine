@@ -158,7 +158,7 @@ class BaseEegParadigm(BaseParadigm):
             le = LabelEncoder().fit(events)
 
         rawdata = dataset.get_rawdata(subject_ids=[subject_id])[
-            "subject_{:d}".format(subject_id)
+            "{:d}".format(subject_id)
         ]
 
         sub_X, sub_y, sub_meta = {}, {}, {}
@@ -239,7 +239,7 @@ class BaseEegParadigm(BaseParadigm):
                         y = np.ones((len(X)), np.int64) * dataset.get_event_id(event)
                     meta = pd.DataFrame(
                         {
-                            "subject": ["subject_{:d}".format(subject_id)] * len(X),
+                            "subject": ["{:d}".format(subject_id)] * len(X),
                             "session": [session_id] * len(X),
                             "run": [run_id] * len(X),
                             "trial": epoch[event].selection,

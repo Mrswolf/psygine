@@ -19,9 +19,18 @@ class BaseDataset:
         return self.__dataset_uid
 
     @abstractmethod
-    def data_path(self, local_path=None, force_update=False, proxies=None):
+    def __getitem__(self, idx):
         pass
-
+    
     @abstractmethod
-    def get_data(self):
+    def __len__(self):
         pass
+        
+    def get_rawdata(self, idxs=None):
+        if idxs is None:
+            idxs = list(range(len(self)))
+        rawdata = dict()
+        for idx in idxs:
+            rawdata[f"{idx}"] = self.__getitem__(idx)
+        return rawdata
+

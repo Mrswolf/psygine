@@ -29,16 +29,17 @@ class Nakanishi2015(SsvepEegDataset):
     _EVENTS = {
         "{:.1f}/{:.1f}".format(param[0], param[1]): (i+1, (0, 4)) for i, param in enumerate(zip(_FREQS, _PHASES))
     }
-    def __init__(self):
+    def __init__(self, local_path=None):
         super().__init__(
             uid='nakanishi2015', 
             subjects=list(range(0, 10)),
             events=self._EVENTS, 
             channels=self._CHANNELS, 
             srate=256,
-            freq_phase_table=self._FREQ_PHASE_TABLE)
+            freq_phase_table=self._FREQ_PHASE_TABLE,
+            local_path=local_path)
     
-    def data_path(self,
+    def _data_path(self,
         subject_id,
         local_path=None,
         force_update=False,
@@ -60,7 +61,7 @@ class Nakanishi2015(SsvepEegDataset):
     def _get_single_subject_data(self, subject_id):
         montage = make_standard_montage('standard_1005')
         montage.rename_channels({ch_name: ch_name.upper() for ch_name in montage.ch_names})
-        dests = self.data_path(subject_id)
+        dests = self._data_path(subject_id, self.local_path)
         raw_mat = loadmat(dests[0][0])
         n_samples, n_channels, n_trials = 1114, 8, 15
         n_classes = 12

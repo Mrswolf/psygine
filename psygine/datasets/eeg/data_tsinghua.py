@@ -8,6 +8,7 @@
 import os.path as op
 import tarfile
 from pathlib import Path
+from threading import local
 import py7zr
 import numpy as np
 import pandas as pd
@@ -80,9 +81,10 @@ class Wang2016(SsvepEegDataset):
             events=self._EVENTS, 
             channels=self._CHANNELS, 
             srate=250,
-            freq_phase_table=self._FREQ_PHASE_TABLE)
+            freq_phase_table=self._FREQ_PHASE_TABLE,
+            local_path=None)
 
-    def data_path(self,
+    def _data_path(self,
         subject_id,
         local_path=None,
         force_update=False,
@@ -105,11 +107,10 @@ class Wang2016(SsvepEegDataset):
         ]
         return dests
 
-    def _get_single_subject_data(self,
-        subject_id):
+    def _get_single_subject_data(self, subject_id):
         r"""return raw data structured in subject->session->run
         """
-        dests = self.data_path(subject_id)
+        dests = self._data_path(subject_id, self.local_path)
         raw_mat = loadmat(dests[0][0])
         # volt
         epoch_data = raw_mat['data'] * 1e-6
@@ -197,16 +198,17 @@ class Beta(SsvepEegDataset):
     _EVENTS = {
         "{:.1f}/{:.1f}".format(param[0], param[1]): (i+1, (0, 2)) for i, param in enumerate(zip(_FREQS, _PHASES))
     }
-    def __init__(self):
+    def __init__(self, local_path=None):
         super().__init__(
             uid='beta', 
             subjects=list(range(0, 70)),
             events=self._EVENTS, 
             channels=self._CHANNELS, 
             srate=250,
-            freq_phase_table=self._FREQ_PHASE_TABLE)
+            freq_phase_table=self._FREQ_PHASE_TABLE,
+            local_path=local_path)
     
-    def data_path(self,
+    def _data_path(self,
         subject_id,
         local_path=None,
         force_update=False,
@@ -248,7 +250,7 @@ class Beta(SsvepEegDataset):
         return dests
     
     def _get_single_subject_data(self, subject_id):
-        dests = self.data_path(subject_id)
+        dests = self._data_path(subject_id, local_path=self.local_path)
         raw_mat = loadmat(dests[0][0])
         epoch_data = raw_mat['data']['EEG'] * 1e-6
         stim = np.zeros((1, *epoch_data.shape[1:]))
@@ -302,16 +304,17 @@ class EldBeta(SsvepEegDataset):
     _EVENTS = {
         "{:.1f}/{:.1f}".format(param[0], param[1]): (i+1, (0, 5)) for i, param in enumerate(zip(_FREQS, _PHASES))
     }
-    def __init__(self):
+    def __init__(self, local_path=None):
         super().__init__(
             uid='eldbeta', 
             subjects=list(range(0, 100)),
             events=self._EVENTS, 
             channels=self._CHANNELS, 
             srate=250,
-            freq_phase_table=self._FREQ_PHASE_TABLE)
+            freq_phase_table=self._FREQ_PHASE_TABLE,
+            local_path=local_path)
     
-    def data_path(self,
+    def _data_path(self,
         subject_id,
         local_path=None,
         force_update=False,
@@ -356,7 +359,7 @@ class EldBeta(SsvepEegDataset):
         return dests
     
     def _get_single_subject_data(self, subject_id):
-        dests = self.data_path(subject_id)
+        dests = self._data_path(subject_id, self.local_path)
         raw_mat = loadmat(dests[0][0])
         epoch_data = raw_mat['data']['EEG']['Epoch'] * 1e-6
         stim = np.zeros((1, *epoch_data.shape[1:]))

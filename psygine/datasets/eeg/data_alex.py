@@ -24,15 +24,16 @@ class AlexMI(MiEegDataset):
         'T7','C3','C4','T8',
         'P7','P3','PZ','P4','P8'
     ]
-    def __init__(self):
+    def __init__(self, local_path=None):
         super().__init__(
             uid='alexeeg',
             subjects=list(range(0, 8)),
             events=self._EVENTS,
             channels=self._CHANNELS,
-            srate=512)
+            srate=512,
+            local_path=local_path)
     
-    def data_path(self,
+    def _data_path(self,
         subject_id,
         local_path=None,
         force_update=False,
@@ -48,7 +49,7 @@ class AlexMI(MiEegDataset):
         return dests
 
     def _get_single_subject_data(self, subject_id):
-        dests = self.data_path(subject_id)
+        dests = self._data_path(subject_id, local_path=self.local_path)
         montage = make_standard_montage('standard_1005')
         montage.rename_channels({ch_name: ch_name.upper() for ch_name in montage.ch_names})
 

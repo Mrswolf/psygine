@@ -29,15 +29,16 @@ class BNCI2014001(MiEegDataset):
         'CP3', 'CP1', 'CPZ', 'CP2', 'CP4', 
         'P1', 'PZ', 'P2', 'POZ'
     ]
-    def __init__(self):
+    def __init__(self, local_path=None):
         super().__init__(
             uid='bnci2014001',
             subjects=list(range(0, 9)),
             events=self._EVENTS,
             channels=self._CHANNELS,
-            srate=250)
+            srate=250,
+            local_path=local_path)
     
-    def data_path(self,
+    def _data_path(self,
         subject_id,
         local_path=None,
         force_update=False,
@@ -61,7 +62,7 @@ class BNCI2014001(MiEegDataset):
         return dests
 
     def _get_single_subject_data(self, subject_id):
-        dests = self.data_path(subject_id)
+        dests = self._data_path(subject_id, local_path=self.local_path)
         montage = make_standard_montage('standard_1005')
         montage.rename_channels({ch_name: ch_name.upper() for ch_name in montage.ch_names})
 
@@ -106,15 +107,16 @@ class BNCI2014004(MiEegDataset):
     _CHANNELS = [
         'C3', 'CZ', 'C4'
     ]
-    def __init__(self):
+    def __init__(self, local_path=None):
         super().__init__(
             uid='bnci2014004',
             subjects=list(range(0, 9)),
             events=self._EVENTS,
             channels=self._CHANNELS,
-            srate=250)
+            srate=250,
+            local_path=local_path)
     
-    def data_path(self,
+    def _data_path(self,
         subject_id,
         local_path=None,
         force_update=False,
@@ -138,7 +140,7 @@ class BNCI2014004(MiEegDataset):
         return dests
 
     def _get_single_subject_data(self, subject_id):
-        dests = self.data_path(subject_id)
+        dests = self._data_path(subject_id, self.local_path)
         montage = make_standard_montage('standard_1005')
         montage.rename_channels({ch_name: ch_name.upper() for ch_name in montage.ch_names})
 
