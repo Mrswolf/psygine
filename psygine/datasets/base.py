@@ -5,10 +5,10 @@
 # License: MIT License
 """Base Dataset Design.
 """
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 
 
-class BaseDataset:
+class BaseDataset(ABC):
     r"""Base Dataset."""
 
     def __init__(self, dataset_uid):
@@ -21,16 +21,7 @@ class BaseDataset:
     @abstractmethod
     def __getitem__(self, idx):
         pass
-    
+
     @abstractmethod
     def __len__(self):
         pass
-        
-    def get_rawdata(self, idxs=None):
-        if idxs is None:
-            idxs = list(range(len(self)))
-        rawdata = dict()
-        for idx in idxs:
-            rawdata[f"{idx}"] = self.__getitem__(idx)
-        return rawdata
-

@@ -122,7 +122,7 @@ class BaseEegDataset(BaseDataset):
         """
         return self._get_single_subject_data(subject_id)
 
-    @abstractmethod()
+    @abstractmethod
     def _get_single_subject_data(self, subject_id):
         r"""Get a single subject's raw data.
 

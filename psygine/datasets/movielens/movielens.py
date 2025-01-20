@@ -32,13 +32,44 @@ class MovieLensDataset_100K(BaseMovieLensDataset):
 
     """
 
-    def __init__(self):
-        super().__init__(
-            "ml-100k",
-            ["data", "item", "user"],
-        )
+    __TABLE_COLS = {
+        "data": ["user id", "item id", "rating", "timestamp"],
+        "item": [
+            "movie id",
+            "movie title",
+            "release date",
+            "video release date",
+            "imdb url",
+            "unknown",
+            "action",
+            "adventure",
+            "animation",
+            "children's",
+            "comedy",
+            "crime",
+            "documentary",
+            "drama",
+            "fantasy",
+            "film-noir",
+            "horror",
+            "musical",
+            "mystery",
+            "romance",
+            "sci-fi",
+            "thriller",
+            "war",
+            "western",
+        ],
+        "user": ["user id", "age", "gender", "occupation", "zip code"],
+    }
 
-    def data_path(self, local_path=None, force_update=False, proxies=None):
+    def __init__(self, local_path=None):
+        super().__init__("ml-100k", self.__TABLE_COLS, local_path=local_path)
+
+    def __len__(self):
+        return 100000
+
+    def _data_path(self, local_path=None, force_update=False, proxies=None):
         url = None
         try:
             url = ML_URLS[self.uid]
@@ -60,70 +91,35 @@ class MovieLensDataset_100K(BaseMovieLensDataset):
             with zipfile.ZipFile(file_dest, "r") as archive:
                 archive.extractall(path=Path(file_dest).parent)
 
-        files = OrderedDict()
-        for table in self.tables:
-            files[table] = op.join(parent_dir, "u.{:s}".format(table))
-        dests = [files]
+        dests = OrderedDict()
+        for table in self.get_tables():
+            dests[table] = op.join(parent_dir, "u.{:s}".format(table))
         return dests
 
-    def get_data(self, tables=None):
-        dests = self.data_path()
-
-        column_names = {
-            "data": ["user id", "item id", "rating", "timestamp"],
-            "item": [
-                "movie id",
-                "movie title",
-                "release date",
-                "video release date",
-                "imdb url",
-                "unknown",
-                "action",
-                "adventure",
-                "animation",
-                "children's",
-                "comedy",
-                "crime",
-                "documentary",
-                "drama",
-                "fantasy",
-                "film-noir",
-                "horror",
-                "musical",
-                "mystery",
-                "romance",
-                "sci-fi",
-                "thriller",
-                "war",
-                "western",
-            ],
-            "user": ["user id", "age", "gender", "occupation", "zip code"],
-        }
-
-        if tables is None:
-            tables = self.tables
+    def _get_rawdata(self, dests):
+        tables = self.get_tables()
 
         rawdata = OrderedDict()
         for table in tables:
             if table == "data":
                 rawdata[table] = pd.read_csv(
-                    dests[0][table],
+                    dests[table],
                     sep="\t",
-                    names=column_names[table],
+                    names=self.get_columns(table),
                     encoding="utf_8",
                 )
             elif table == "item":
                 rawdata[table] = pd.read_csv(
-                    dests[0][table],
+                    dests[table],
                     sep="|",
-                    names=column_names[table],
+                    names=self.get_columns(table),
                     encoding="latin_1",
                 )
             else:
                 rawdata[table] = pd.read_csv(
-                    dests[0][table],
+                    dests[table],
                     sep="|",
-                    names=column_names[table],
+                    names=self.get_columns(table),
                     encoding="utf_8",
                 )
         return rawdata
@@ -234,10 +230,19 @@ class MovieLensDataset_1M(BaseMovieLensDataset):
     - Movies are mostly entered by hand, so errors and inconsistencies may exist
     """
 
-    def __init__(self):
-        super().__init__("ml-1m", ["ratings", "movies", "users"])
+    __TABLE_COLS = {
+        "ratings": ["UserID", "MovieID", "Rating", "Timestamp"],
+        "movies": ["MovieID", "Title", "Genres"],
+        "users": ["UserID", "Gender", "Age", "Occupation", "Zip-code"],
+    }
 
-    def data_path(self, local_path=None, force_update=False, proxies=None):
+    def __init__(self, local_path=None):
+        super().__init__("ml-1m", self.__TABLE_COLS, local_path=local_path)
+
+    def __len__(self):
+        return 1000209
+
+    def _data_path(self, local_path=None, force_update=False, proxies=None):
         url = None
         try:
             url = ML_URLS[self.uid]
@@ -259,30 +264,19 @@ class MovieLensDataset_1M(BaseMovieLensDataset):
             with zipfile.ZipFile(file_dest, "r") as archive:
                 archive.extractall(path=Path(file_dest).parent)
 
-        files = OrderedDict()
-        for table in self.tables:
-            files[table] = op.join(parent_dir, "{:s}.dat".format(table))
-        dests = [files]
+        dests = OrderedDict()
+        for table in self.get_tables():
+            dests[table] = op.join(parent_dir, "{:s}.dat".format(table))
         return dests
 
-    def get_data(self, tables=None):
-        dests = self.data_path()
-
-        column_names = {
-            "ratings": ["UserID", "MovieID", "Rating", "Timestamp"],
-            "movies": ["MovieID", "Title", "Genres"],
-            "users": ["UserID", "Gender", "Age", "Occupation", "Zip-code"],
-        }
-
-        if tables is None:
-            tables = self.tables
-
+    def _get_rawdata(self, dests):
+        tables = self.get_tables()
         rawdata = OrderedDict()
         for table in tables:
             rawdata[table] = pd.read_csv(
-                dests[0][table],
+                dests[table],
                 sep="::",
-                names=column_names[table],
+                names=self.get_columns(table),
                 encoding="latin_1" if table == "movies" else "utf_8",
             )
         return rawdata
@@ -295,10 +289,19 @@ class MovieLensDataset_10M(BaseMovieLensDataset):
 
     """
 
-    def __init__(self):
-        super().__init__("ml-10m", ["ratings", "movies", "tags"])
+    __TABLE_COLS = {
+        "ratings": ["UserID", "MovieID", "Rating", "Timestamp"],
+        "movies": ["MovieID", "Title", "Genres"],
+        "tags": ["UserID", "MovieID", "Tag", "Timestamp"],
+    }
 
-    def data_path(self, local_path=None, force_update=False, proxies=None):
+    def __init__(self, local_path=None):
+        super().__init__("ml-10m", self.__TABLE_COLS, local_path=local_path)
+
+    def __len__(self):
+        return 10000054
+
+    def _data_path(self, local_path=None, force_update=False, proxies=None):
         url = None
         try:
             url = ML_URLS[self.uid]
@@ -320,30 +323,20 @@ class MovieLensDataset_10M(BaseMovieLensDataset):
             with zipfile.ZipFile(file_dest, "r") as archive:
                 archive.extractall(path=Path(file_dest).parent)
 
-        files = OrderedDict()
-        for table in self.tables:
-            files[table] = op.join(parent_dir, "{:s}.dat".format(table))
-        dests = [files]
+        dests = OrderedDict()
+        for table in self.get_tables():
+            dests[table] = op.join(parent_dir, "{:s}.dat".format(table))
         return dests
 
-    def get_data(self, tables=None):
-        dests = self.data_path()
-
-        column_names = {
-            "ratings": ["UserID", "MovieID", "Rating", "Timestamp"],
-            "movies": ["MovieID", "Title", "Genres"],
-            "tags": ["UserID", "MovieID", "Tag", "Timestamp"],
-        }
-
-        if tables is None:
-            tables = self.tables
+    def _get_rawdata(self, dests):
+        tables = self.get_tables()
 
         rawdata = OrderedDict()
         for table in tables:
             rawdata[table] = pd.read_csv(
-                dests[0][table],
+                dests[table],
                 sep="::",
-                names=column_names[table],
+                names=self.get_columns(table),
                 encoding="utf_8",
             )
         return rawdata
@@ -356,13 +349,22 @@ class MovieLensDataset_20M(BaseMovieLensDataset):
 
     """
 
-    def __init__(self):
-        super().__init__(
-            "ml-20m",
-            ["ratings", "movies", "tags", "links", "genome-scores", "genome-tags"],
-        )
+    __TABLE_COLS = {
+        "ratings": ["userId", "movieId", "rating", "timestamp"],
+        "movies": ["movieId", "title", "genres"],
+        "tags": ["userId", "movieId", "tag", "timestamp"],
+        "links": ["movieId", "imdbId", "tmdbId"],
+        "genome-scores": ["movieId", "tagId", "relevance"],
+        "genome-tags": ["tagId", "tag"],
+    }
 
-    def data_path(self, local_path=None, force_update=False, proxies=None):
+    def __init__(self, local_path=None):
+        super().__init__("ml-20m", self.__TABLE_COLS, local_path=local_path)
+
+    def __len__(self):
+        return 20000263
+
+    def _data_path(self, local_path=None, force_update=False, proxies=None):
         url = None
         try:
             url = ML_URLS[self.uid]
@@ -384,34 +386,21 @@ class MovieLensDataset_20M(BaseMovieLensDataset):
             with zipfile.ZipFile(file_dest, "r") as archive:
                 archive.extractall(path=Path(file_dest).parent)
 
-        files = OrderedDict()
-        for table in self.tables:
-            files[table] = op.join(parent_dir, "{:s}.csv".format(table))
-        dests = [files]
+        dests = OrderedDict()
+        for table in self.get_tables():
+            dests[table] = op.join(parent_dir, "{:s}.csv".format(table))
         return dests
 
-    def get_data(self, tables=None):
-        dests = self.data_path()
-
-        column_names = {
-            "ratings": ["userId", "movieId", "rating", "timestamp"],
-            "movies": ["movieId", "title", "genres"],
-            "tags": ["userId", "movieId", "tag", "timestamp"],
-            "links": ["movieId", "imdbId", "tmdbId"],
-            "genome-scores": ["movieId", "tagId", "relevance"],
-            "genome-tags": ["tagId", "tag"],
-        }
-
-        if tables is None:
-            tables = self.tables
+    def _get_rawdata(self, dests):
+        tables = self.get_tables()
 
         rawdata = OrderedDict()
         for table in tables:
             rawdata[table] = pd.read_csv(
-                dests[0][table],
+                dests[table],
                 sep=",",
                 header=0,
-                names=column_names[table],
+                names=self.get_columns(table),
                 encoding="utf_8",
             )
         return rawdata
