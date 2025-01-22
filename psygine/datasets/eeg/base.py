@@ -155,8 +155,10 @@ class BaseEegDataset(BaseDataset):
         for subject_id in subject_ids:
             if subject_id not in self.subjects:
                 raise ValueError("Invalid subject {}.".format(subject_id))
-            
-        rawdata = super().get_rawdata(subject_ids)
+
+        rawdata = dict()
+        for subject_id in subject_ids:
+            rawdata[f"subject_{subject_id}"] = self.__getitem__(subject_id)
         return rawdata
 
     def download_all(self, local_path=None, force_update=False, proxies=None):
@@ -174,7 +176,7 @@ class BaseEegDataset(BaseDataset):
         """
         if local_path is not None:
             self.local_path = local_path
-        
+
         for subject_id in self.subjects:
             self.data_path(
                 subject_id,

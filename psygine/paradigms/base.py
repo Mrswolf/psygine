@@ -5,11 +5,11 @@
 # License: MIT License
 """Base Paradigm Design.
 """
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from joblib import Parallel, delayed
 
 
-class BaseParadigm:
+class BaseParadigm(ABC):
     r"""Base Paradigm.
 
     Parameters
@@ -42,15 +42,15 @@ class BaseParadigm:
         """
 
     @abstractmethod
-    def _get_single_subject_data(self, dataset, subject_id):
-        r"""Get data from a single subject.
+    def _process_data(self, dataset, idx):
+        r"""Get processed data from index.
 
         Parameters
         ----------
         dataset : BaseDataset
             An instance of BaseDataset.
-        subject_id : int
-            The subject's id.
+        idx : int
+            Any index to query data.
 
         Returns
         -------
@@ -62,15 +62,15 @@ class BaseParadigm:
             Nearly a database storing useful information, usually a pandas dataframe object.
         """
 
-    def get_data(self, dataset, subject_ids=None, n_jobs=None):
+    def get_data(self, dataset, idxs=None, n_jobs=None):
         r"""Get data from multiple subjects.
 
         Parameters
         ----------
         dataset : BaseDataset
             An instance of BaseDataset.
-        subject_ids : list, optional
-            A list of queried subject ids. If None, use all subjects the dataset supported.
+        idxs : list, optional
+            A list of queried indexes. If None, use all indexes the dataset supported.
         n_jobs : int, optional
             The number of cores to use to load data, -1 for all cores.
 
@@ -89,15 +89,18 @@ class BaseParadigm:
                     dataset.uid
                 )
             )
-        if subject_ids is None:
-            subject_ids = dataset.subjects
-        X_list, y_list, meta_list = zip(
-            *Parallel(n_jobs=n_jobs)(
-                delayed(self._get_single_subject_data)(dataset, subject_id)
-                for subject_id in subject_ids
-            )
+        if idxs is None:
+            idxs = list(range(len(dataset)))
+        # X_list, y_list, meta_list = zip(
+        #     *Parallel(n_jobs=n_jobs)(
+        #         delayed(self._process_data)(dataset, idx) for idx in idxs
+        #     )
+        # )
+
+        outputs = Parallel(n_jobs=n_jobs)(
+            delayed(self._process_data)(dataset, idx) for idx in idxs
         )
-        return X_list, y_list, meta_list
+        return outputs
 
     @property
     def uid(self):

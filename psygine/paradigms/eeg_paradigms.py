@@ -37,6 +37,7 @@ class BaseEegParadigm(BaseParadigm):
     dataset_hooks : bool
         Whether to use default hooks from the dataset, default True.
         However, any user defined hook would override the dataset default hook.
+        TODO: To be Developed.
     label_transform : bool
         Whether to encode labels with value between 0 and n_classes-1, default False.
     Attributes
@@ -145,7 +146,7 @@ class BaseEegParadigm(BaseParadigm):
                 intervals = intervals * len(events)
         return channels, events, intervals, srate
 
-    def _get_single_subject_data(self, dataset, subject_id):
+    def _process_data(self, dataset, subject_id):
         channels, events, intervals, srate = self._parse_args(
             dataset,
             self._paradigm_channels,
@@ -158,7 +159,7 @@ class BaseEegParadigm(BaseParadigm):
             le = LabelEncoder().fit(events)
 
         rawdata = dataset.get_rawdata(subject_ids=[subject_id])[
-            "{:d}".format(subject_id)
+            "subject_{:d}".format(subject_id)
         ]
 
         sub_X, sub_y, sub_meta = {}, {}, {}
@@ -239,7 +240,7 @@ class BaseEegParadigm(BaseParadigm):
                         y = np.ones((len(X)), np.int64) * dataset.get_event_id(event)
                     meta = pd.DataFrame(
                         {
-                            "subject": ["{:d}".format(subject_id)] * len(X),
+                            "subject": ["subject_{:d}".format(subject_id)] * len(X),
                             "session": [session_id] * len(X),
                             "run": [run_id] * len(X),
                             "trial": epoch[event].selection,
@@ -309,7 +310,7 @@ class BaseEegParadigm(BaseParadigm):
             Return concated pandas dataframe if concat is True.
         """
         st = time.time()
-        X_list, y_list, meta_list = super().get_data(dataset, subject_ids, n_jobs)
+        X_list, y_list, meta_list = zip(*super().get_data(dataset, subject_ids, n_jobs))
         _, events, _, _ = self._parse_args(
             dataset,
             self._paradigm_channels,
@@ -403,7 +404,13 @@ class MiEegParadigm(BaseEegParadigm):
     """
 
     def __init__(
-        self, channels=None, events=None, intervals=None, srate=None, dataset_hooks=True
+        self,
+        channels=None,
+        events=None,
+        intervals=None,
+        srate=None,
+        dataset_hooks=True,
+        label_transform=True,
     ):
         super().__init__(
             "mi-eeg",
@@ -412,7 +419,7 @@ class MiEegParadigm(BaseEegParadigm):
             intervals=intervals,
             srate=srate,
             dataset_hooks=dataset_hooks,
-            label_transform=True
+            label_transform=label_transform,
         )
 
 
@@ -442,7 +449,13 @@ class SsvepEegParadigm(BaseEegParadigm):
     """
 
     def __init__(
-        self, channels=None, events=None, intervals=None, srate=None, dataset_hooks=True
+        self,
+        channels=None,
+        events=None,
+        intervals=None,
+        srate=None,
+        dataset_hooks=True,
+        label_transform=True,
     ):
         super().__init__(
             "ssvep-eeg",
@@ -451,5 +464,5 @@ class SsvepEegParadigm(BaseEegParadigm):
             intervals=intervals,
             srate=srate,
             dataset_hooks=dataset_hooks,
-            label_transform=True
+            label_transform=label_transform,
         )
