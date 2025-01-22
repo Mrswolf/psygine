@@ -8,7 +8,7 @@
 """
 from collections import OrderedDict
 
-from .base import BaseToyVideoDataset
+from ..base import BaseDataset
 from ..utils.network import get_data_path
 
 import numpy as np
@@ -18,24 +18,27 @@ import cv2
 TRAFFIC1_URL = "https://github.com/andrewssobral/lrslibrary/raw/master/dataset/demo.avi"
 
 
-class TrafficVideo1Dataset(BaseToyVideoDataset):
-    def __init__(self):
+class TrafficVideo1Dataset(BaseDataset):
+    def __init__(self, local_path=None):
         super().__init__("traffic1")
+        self.local_path = local_path
 
-    def data_path(self, local_path=None, force_update=False, proxies=None):
+    def __len__(self):
+        return 1
+
+    def _data_path(self, local_path=None, force_update=False, proxies=None):
         file_dest = get_data_path(
             TRAFFIC1_URL,
-            "toy",
+            "misc",
             path=local_path,
             proxies=proxies,
             force_update=force_update,
         )
-        return [file_dest]
+        return file_dest
 
-    def get_data(self):
-        dests = self.data_path()
-
-        video = cv2.VideoCapture(dests[0])
+    def __getitem__(self, idx):
+        path = self._data_path(local_path=self.local_path)
+        video = cv2.VideoCapture(path)
         if not video.isOpened():
             raise Exception("Failed to open video file.")
         frames = []
@@ -47,7 +50,4 @@ class TrafficVideo1Dataset(BaseToyVideoDataset):
         video.release()
 
         frames = np.array(frames)
-
-        rawdata = OrderedDict()
-        rawdata["video"] = frames
-        return rawdata
+        return frames

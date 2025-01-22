@@ -18,7 +18,7 @@ from ..utils.network import get_data_path
 GOPRO_GOOGLE_URL = "https://drive.google.com/uc?export=download&id=1y4wvPdOG3mojpFCHTqLgriexhbjoWVkK"
 GOPRO_SNU_URL = "http://data.cv.snu.ac.kr:8008/webdav/dataset/GOPRO/GOPRO_Large.zip"
 GOPRO_LOCAL_URL = "/GOPRO_Large.zip"
-
+# TODO: How to download the dataset from the Google Drive URL?
 
 class _GoProDataset(PairImageDataset):
     def __init__(self, isTrain=True, local_path=None, prefetch=False):
@@ -79,7 +79,7 @@ class _GoProDataset(PairImageDataset):
     
     def _load_data(self, path):
         return np.array(Image.open(path))
-    
+
 
 class GoProTrainDataset(_GoProDataset):
     def __init__(self, local_path=None, prefetch=False):
@@ -88,5 +88,3 @@ class GoProTrainDataset(_GoProDataset):
 class GoProTestDataset(_GoProDataset):
     def __init__(self, local_path=None, prefetch=False):
         super().__init__(isTrain=False, local_path=local_path, prefetch=prefetch)
-
-

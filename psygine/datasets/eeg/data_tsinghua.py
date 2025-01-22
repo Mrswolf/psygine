@@ -74,15 +74,16 @@ class Wang2016(SsvepEegDataset):
     _EVENTS = {
         "{:.1f}/{:.1f}".format(param[0], param[1]): (i+1, (0, 5)) for i, param in enumerate(zip(_FREQS, _PHASES))
     }    
-    def __init__(self):
+    def __init__(self, local_path=None):
         super().__init__(
-            uid='wang2016', 
+            uid="wang2016",
             subjects=list(range(0, 35)),
-            events=self._EVENTS, 
-            channels=self._CHANNELS, 
+            events=self._EVENTS,
+            channels=self._CHANNELS,
             srate=250,
             freq_phase_table=self._FREQ_PHASE_TABLE,
-            local_path=None)
+            local_path=local_path,
+        )
 
     def _data_path(self,
         subject_id,
@@ -95,7 +96,7 @@ class Wang2016(SsvepEegDataset):
         url = "{:s}S{:d}.mat.7z".format(Wang2016_URL, subject_id+1)
         file_dest = get_data_path(url, 'tsinghua',
             path=local_path, proxies=proxies, force_update=force_update)
-        
+
         if not op.exists(file_dest[:-3]):
             # decompression the data
             with py7zr.SevenZipFile(file_dest, 'r') as archive:
@@ -313,7 +314,7 @@ class EldBeta(SsvepEegDataset):
             srate=250,
             freq_phase_table=self._FREQ_PHASE_TABLE,
             local_path=local_path)
-    
+
     def _data_path(self,
         subject_id,
         local_path=None,
@@ -346,7 +347,7 @@ class EldBeta(SsvepEegDataset):
             path=local_path, proxies=proxies, force_update=force_update)
 
         parent_dir = op.join(Path(file_dest).parent, 'S{:d}'.format(subject_id))
-        
+
         if not op.exists(op.join(parent_dir, 'S{:d}.mat'.format(subject_id))):
             # decompression the data
             with tarfile.open(file_dest, 'r:gz') as archive:
@@ -357,7 +358,7 @@ class EldBeta(SsvepEegDataset):
             ]
         ]
         return dests
-    
+
     def _get_single_subject_data(self, subject_id):
         dests = self._data_path(subject_id, self.local_path)
         raw_mat = loadmat(dests[0][0])
@@ -399,7 +400,7 @@ class EldBeta(SsvepEegDataset):
         return sess
 
     def _get_block_trial_order(self, subject_id, block_id):
-        dests = self.data_path(subject_id)
+        dests = self._data_path(subject_id, self.local_path)
         filename = "sub-{:>03d}_ses-{:>02d}_task-ssvep_events.tsv".format(subject_id+1, block_id+1)
         filepath = op.join(Path(dests[0][0]).parent, 'sub-{:>03d}'.format(subject_id+1), 'ses-{:>02d}'.format(block_id+1), 'eeg', filename)
         trial_seq_ids = pd.read_csv(filepath, sep='\t')['value'].to_numpy() - 1
