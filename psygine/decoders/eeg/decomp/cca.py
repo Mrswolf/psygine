@@ -264,11 +264,6 @@ def ecca_feature(X, T, Yf, n_components=1, n_jobs=None):
     X = np.reshape(X, (-1, *X.shape[-2:]))
     Yf = np.reshape(Yf, (-1, *Yf.shape[-2:]))
     T = np.reshape(T, (-1, *T.shape[-2:]))
-    # rhos = []
-    # for t, yf in zip(T, Yf):
-    #     rs = Parallel(n_jobs=n_jobs)(delayed(partial(_ecca_feature, n_components=n_components))(x, t, yf) for x in X)
-    #     rhos.append(rs)
-    # rhos = np.stack(rhos).T
 
     rhos = Parallel(n_jobs=n_jobs)(
         delayed(partial(_ecca_feature, n_components=n_components))(x, t, yf)
