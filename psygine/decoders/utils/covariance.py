@@ -291,7 +291,10 @@ def positive_definite_operator(P, operator, n_jobs=None):
         if not is_positive_definite(Ci):
             raise ValueError("The input matrix should be positive-definite.")
         eigvals, eigvects = eigh(Ci)
+        # rtol = np.spacing(np.linalg.norm(eigvals, ord=np.inf)) * np.max(Ci.shape)
+        # r1 = eigvals > rtol
         eigvals = np.diag(operator(eigvals))
+        #eigvals[np.logical_not(r1)] = 0
         Co = eigvects @ eigvals @ eigvects.T
         return Co
 

@@ -4,13 +4,17 @@
 # License: MIT License
 """Basic methods related with SVD.
 """
+import os
+
+os.environ["SCIPY_USE_PROPACK"] = "True"
+
 import numpy as np
 from scipy.integrate import quad
+from scipy.linalg import svd
+from scipy.sparse.linalg import svds
 
-__all__ = [
-    "sign_flip",
-    "optimal_svht",
-]
+
+__all__ = ["sign_flip", "optimal_svht", "fastsvd"]
 
 
 def sign_flip(U, V, X):
@@ -167,3 +171,28 @@ def optimal_svht(m, n, sigma, noise_known=False):
         weight = weight / np.sqrt(miu_beta)
         tau = weight * sigma
     return tau
+
+
+def fastsvd(A, k=1, method="scipy", random_state=None):
+    U, s, Vh = None, None, None
+    rs = np.random.RandomState(random_state)
+    if method == "matlab":
+        [U, s, Vh] = svd(A, full_matrices=False, lapack_driver="gesvd")
+        U, s, Vh = U[:, :k], s[:k], Vh[:k, :]
+    elif method == "scipy":
+        [U, s, Vh] = svd(A, full_matrices=False, lapack_driver="gesdd")
+        U, s, Vh = U[:, :k], s[:k], Vh[:k, :]
+    elif method == "propack":
+        [U, s, Vh] = svds(A, k=k, which="LM", solver="propack")
+    elif method == "arpack":
+        v0 = rs.uniform(-1, 1, min(A.shape))
+        [U, s, Vh] = svds(A, k=k, which="LM", v0=v0, solver="arpack")
+    elif method == "lobpcg":
+        [U, s, Vh] = svds(A, k=k, which="LM", solver="lobpcg")
+    else:
+        raise NotImplementedError(
+            "Unknown svd method:{:s}, available methods include matlab, scipy, propack, arpack, lobpcg.".format(
+                method
+            )
+        )
+    return U, s, Vh

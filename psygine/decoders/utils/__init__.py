@@ -9,3 +9,4 @@ from .covariance import *
 from .svd import *
 from .fourier import *
 from .cr import *
+from .proxmap import *
