@@ -32,7 +32,8 @@ dependencies = [
   "py7zr",
   "nibabel",
   "pillow",
-  "opencv-python"
+  "opencv-python",
+  "ismrmrd"
 ]
 
 [project.urls]
