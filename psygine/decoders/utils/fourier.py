@@ -25,7 +25,7 @@ def fft1c(X, axis=-1, workers=-1):
         K-space data.
     """
     K = fftshift(
-        fft(fftshift(X, axes=axis), axis=axis, norm="ortho", workers=workers), axes=axis
+        fft(ifftshift(X, axes=axis), axis=axis, norm="ortho", workers=workers), axes=axis
     )
     return K
 
@@ -45,7 +45,7 @@ def ifft1c(K, axis=-1, workers=-1):
     X : array_like
         Original data.
     """
-    X = ifftshift(
+    X = fftshift(
         ifft(ifftshift(K, axes=axis), axis=axis, norm="ortho", workers=workers),
         axes=axis,
     )
@@ -67,7 +67,7 @@ def fft2c(X, axes=(-2, -1), workers=-1):
     K : array_like
         K-space data.
     """
-    K = ifftshift(
+    K = fftshift(
         fft2(ifftshift(X, axes=axes), axes=axes, norm="ortho", workers=workers),
         axes=axes,
     )
@@ -89,7 +89,7 @@ def ifft2c(K, axes=(-2, -1), workers=-1):
     X : array_like
         Original data.
     """
-    X = ifftshift(
+    X = fftshift(
         ifft2(ifftshift(K, axes=axes), axes=axes, norm="ortho", workers=workers),
         axes=axes,
     )
@@ -109,7 +109,7 @@ def fftnc(X, workers=-1):
     K : array_like
         K-space data.
     """
-    K = fftshift(fftn(fftshift(X), norm="ortho", workers=workers))
+    K = fftshift(fftn(ifftshift(X), norm="ortho", workers=workers))
     return K
 
 
@@ -126,5 +126,5 @@ def ifftnc(K, workers=-1):
     X : array_like
         Original data.
     """
-    X = ifftshift(ifftn(ifftshift(K), norm="ortho", workers=workers))
+    X = fftshift(ifftn(ifftshift(K), norm="ortho", workers=workers))
     return X
