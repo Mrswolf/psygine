@@ -6,7 +6,6 @@
 """OCMR Dataset.
 """
 import os
-from pkgutil import get_data
 import ismrmrd
 import ismrmrd.xsd
 import numpy as np
