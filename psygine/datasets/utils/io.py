@@ -9,6 +9,7 @@ import os.path as op
 import json
 import numpy as np
 import scipy.io as sio
+from scipy.io.matlab import mat_struct
 import mat73
 import mmap
 
@@ -46,7 +47,7 @@ def _loadmat(filename):
         todict is called to change them to nested dictionaries
         '''
         for key in d:
-            if isinstance(d[key], sio.matlab.mio5_params.mat_struct):
+            if isinstance(d[key], mat_struct):
                 d[key] = _todict(d[key])
             elif isinstance(d[key], np.ndarray):
                 d[key] = _tolist(d[key])
@@ -59,7 +60,7 @@ def _loadmat(filename):
         d = {}
         for strg in matobj._fieldnames:
             elem = matobj.__dict__[strg]
-            if isinstance(elem, sio.matlab.mio5_params.mat_struct):
+            if isinstance(elem, mat_struct):
                 d[strg] = _todict(elem)
             elif isinstance(elem, np.ndarray):
                 d[strg] = _tolist(elem)
@@ -76,7 +77,7 @@ def _loadmat(filename):
         if ndarray.dtype == object:
             elem_list = []
             for sub_elem in ndarray:
-                if isinstance(sub_elem, sio.matlab.mio5_params.mat_struct):
+                if isinstance(sub_elem, mat_struct):
                     elem_list.append(_todict(sub_elem))
                 elif isinstance(sub_elem, np.ndarray):
                     elem_list.append(_tolist(sub_elem))
