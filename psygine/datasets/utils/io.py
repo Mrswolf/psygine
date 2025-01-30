@@ -136,7 +136,7 @@ def get_local_path(key):
         path = op.join(get_home_dir(), 'psygine', 'psygine_data')
         if not op.exists(path):
             try:
-                os.mkdir(path)
+                os.makedirs(path)
             except OSError:
                 raise OSError("no permission to create default data folder")
     return path
