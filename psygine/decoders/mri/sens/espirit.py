@@ -13,6 +13,8 @@ from psygine.decoders.utils.fourier import fftnc, ifftnc
 from scipy.linalg import svd
 from joblib import Parallel, delayed
 
+__all__ =['espirit', 'espirit_proj3d']
+
 def get_calib(X, r):
     Ns = np.shape(X)
 
@@ -124,7 +126,6 @@ def espirit(X, k, r, t, c):
     maps = np.stack(Parallel(n_jobs=-1)(delayed(_espirit_maps)(i, kerimgs) for i in range(N)), axis=0)
     maps = np.reshape(maps, np.append(Ns, (Nc, Nc)))
     return maps
-
 
 def espirit_proj3d(x, maps):
     """
