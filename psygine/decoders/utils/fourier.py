@@ -96,7 +96,7 @@ def ifft2c(K, axes=(-2, -1), workers=-1):
     return X
 
 
-def fftnc(X, workers=-1):
+def fftnc(X, axes=None, workers=-1):
     r"""Nd FFT.
 
     Parameters
@@ -109,11 +109,11 @@ def fftnc(X, workers=-1):
     K : array_like
         K-space data.
     """
-    K = fftshift(fftn(ifftshift(X), norm="ortho", workers=workers))
+    K = fftshift(fftn(ifftshift(X, axes=axes), axes=axes, norm="ortho", workers=workers), axes=axes)
     return K
 
 
-def ifftnc(K, workers=-1):
+def ifftnc(K, axes=None, workers=-1):
     r"""Nd iFFT.
 
     Parameters
@@ -126,5 +126,5 @@ def ifftnc(K, workers=-1):
     X : array_like
         Original data.
     """
-    X = fftshift(ifftn(ifftshift(K), norm="ortho", workers=workers))
+    X = fftshift(ifftn(ifftshift(K, axes=axes), axes=axes, norm="ortho", workers=workers), axes=axes)
     return X

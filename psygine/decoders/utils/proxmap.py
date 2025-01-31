@@ -8,7 +8,8 @@
 import numpy as np
 import warnings
 # Suppress only ComplexWarning
-warnings.filterwarnings("ignore", category=np.ComplexWarning)
+from numpy.exceptions import ComplexWarning
+warnings.filterwarnings("ignore", category=ComplexWarning)
 
 __all__ = ["proxmap_l1", "proxmap_nuclear"]
 
