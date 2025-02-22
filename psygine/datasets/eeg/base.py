@@ -67,7 +67,7 @@ class BaseEEGDataset(BaseDataset):
         self._subject_ids = subjects
         self._valid_paradigms = paradigms
         self._dataset_events = events
-        self._dataset_channels = [ch.upper() for ch in channels]
+        self._dataset_channels = [ch.upper() for ch in channels] if channels else None
         self._srate = srate
         self.local_path = local_path
         self._freq_phase_table = freq_phase_table
@@ -196,7 +196,7 @@ class BaseEEGDataset(BaseDataset):
             self.local_path = local_path
 
         for subject_id in self.subjects:
-            self.data_path(
+            self._data_path(
                 subject_id,
                 local_path=self.local_path,
                 force_update=force_update,
