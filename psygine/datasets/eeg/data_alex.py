@@ -7,12 +7,13 @@
 """
 from mne.io import Raw
 from mne.channels import make_standard_montage
-from .base import MiEegDataset
+from .base import BaseEEGDataset
 from ..utils.network import get_data_path
 
 ALEX_URL = "https://zenodo.org/record/806023/files/"
 
-class AlexMI(MiEegDataset):
+
+class AlexMI(BaseEEGDataset):
     _EVENTS = {
         "right_hand": (2, (0, 3)),
         "feet": (3, (0, 3)),
@@ -26,13 +27,15 @@ class AlexMI(MiEegDataset):
     ]
     def __init__(self, local_path=None):
         super().__init__(
-            uid='alexeeg',
+            uid="alexeeg",
             subjects=list(range(0, 8)),
+            paradigms=["mi-eeg"],
             events=self._EVENTS,
             channels=self._CHANNELS,
             srate=512,
-            local_path=local_path)
-    
+            local_path=local_path,
+        )
+
     def _data_path(self,
         subject_id,
         local_path=None,
@@ -40,7 +43,7 @@ class AlexMI(MiEegDataset):
         proxies=None):
         if subject_id not in self.subjects:
             raise ValueError("Invalid subject id")
-        
+
         url = '{:s}subject{:d}.raw.fif'.format(ALEX_URL, subject_id+1)
         dests = [
             [get_data_path(url, self.uid,

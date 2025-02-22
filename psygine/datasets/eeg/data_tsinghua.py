@@ -15,7 +15,7 @@ import pandas as pd
 from mne import create_info
 from mne.io import RawArray
 from mne.channels import make_standard_montage
-from .base import SsvepEegDataset
+from .base import BaseEEGDataset, SsvepMixin
 from ..utils.network import get_data_path
 from ..utils.io import loadmat
 
@@ -24,7 +24,8 @@ Wang2016_URL = "http://bci.med.tsinghua.edu.cn/upload/yijun/"
 BETA_URL = "http://bci.med.tsinghua.edu.cn/upload/liubingchuan/"
 ELD_BETA_URL = "https://figshare.com/ndownloader/files"
 
-class Wang2016(SsvepEegDataset):
+
+class Wang2016(SsvepMixin, BaseEEGDataset):
     r"""SSVEP dataset from Yijun Wang
 
     This dataset gathered SSVEP-BCI recordings of 35 healthy subjects (17 females, aged 17-34 years, mean age: 22 years) focusing on 40 characters flickering at different frequencies (8-15.8 Hz with an interval of 0.2 Hz). For each subject, the experiment consisted of 6 blocks. Each block contained 40 trials corresponding to all 40 characters indicated in a random order. Each trial started with a visual cue (a red square) indicating a target stimulus. The cue appeared for 0.5 s on the screen. Subjects were asked to shift their gaze to the target as soon as possible within the cue duration. Following the cue offset, all stimuli started to flicker on the screen concurrently and lasted 5 s. After stimulus offset, the screen was blank for 0.5 s before the next trial began, which allowed the subjects to have short breaks between consecutive trials. Each trial lasted a total of 6 s. To facilitate visual fixation, a red triangle appeared below the flickering target during the stimulation period. In each block, subjects were asked to avoid eye blinks during the stimulation period. To avoid visual fatigue, there was a rest for several minutes between two consecutive blocks.
@@ -78,6 +79,7 @@ class Wang2016(SsvepEegDataset):
         super().__init__(
             uid="wang2016",
             subjects=list(range(0, 35)),
+            paradigms=["ssvep-eeg"],
             events=self._EVENTS,
             channels=self._CHANNELS,
             srate=250,
@@ -150,7 +152,8 @@ class Wang2016(SsvepEegDataset):
         }
         return sess
 
-class Beta(SsvepEegDataset):
+
+class Beta(SsvepMixin, BaseEEGDataset):
     r"""BETA SSVEP dataset [1]_.
 
     EEG data after preprocessing are store as a 4-way tensor, with a dimension of channel x time point x block x condition. Each trial comprises 0.5-s data before the event onset and 0.5-s data after the time window of 2 s or 3 s. For S1-S15, the time window is 2 s and the trial length is 3 s, whereas for S16-S70 the time window is 3 s and the trial length is 4 s. Additional details about the channel and condition information can be found in the following supplementary information.
@@ -201,14 +204,16 @@ class Beta(SsvepEegDataset):
     }
     def __init__(self, local_path=None):
         super().__init__(
-            uid='beta', 
+            uid="beta",
             subjects=list(range(0, 70)),
-            events=self._EVENTS, 
-            channels=self._CHANNELS, 
+            paradigms=["ssvep-eeg"],
+            events=self._EVENTS,
+            channels=self._CHANNELS,
             srate=250,
             freq_phase_table=self._FREQ_PHASE_TABLE,
-            local_path=local_path)
-    
+            local_path=local_path,
+        )
+
     def _data_path(self,
         subject_id,
         local_path=None,
@@ -249,7 +254,7 @@ class Beta(SsvepEegDataset):
             ]
         ]
         return dests
-    
+
     def _get_single_subject_data(self, subject_id):
         dests = self._data_path(subject_id, local_path=self.local_path)
         raw_mat = loadmat(dests[0][0])
@@ -288,7 +293,8 @@ class Beta(SsvepEegDataset):
         }
         return sess
 
-class EldBeta(SsvepEegDataset):
+
+class EldBeta(SsvepMixin, BaseEEGDataset):
     _CHANNELS = [
         'FP1', 'FPZ', 'FP2', 'AF3', 'AF4', 'F7', 'F5', 'F3', 'F1',
         'FZ', 'F2', 'F4', 'F6', 'F8', 'FT7', 'FC5', 'FC3', 'FC1',
@@ -307,13 +313,15 @@ class EldBeta(SsvepEegDataset):
     }
     def __init__(self, local_path=None):
         super().__init__(
-            uid='eldbeta', 
+            uid="eldbeta",
             subjects=list(range(0, 100)),
-            events=self._EVENTS, 
-            channels=self._CHANNELS, 
+            paradigms=["ssvep-eeg"],
+            events=self._EVENTS,
+            channels=self._CHANNELS,
             srate=250,
             freq_phase_table=self._FREQ_PHASE_TABLE,
-            local_path=local_path)
+            local_path=local_path,
+        )
 
     def _data_path(self,
         subject_id,

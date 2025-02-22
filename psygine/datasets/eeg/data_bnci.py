@@ -9,13 +9,14 @@ import numpy as np
 from mne import create_info
 from mne.io import RawArray
 from mne.channels import make_standard_montage
-from .base import MiEegDataset
+from .base import BaseEEGDataset
 from ..utils.network import get_data_path
 from ..utils.io import loadmat
 
 BNCI_URL = "http://bnci-horizon-2020.eu/database/data-sets/"
 
-class BNCI2014001(MiEegDataset):
+
+class BNCI2014001(BaseEEGDataset):
     _EVENTS = {
         "left_hand": (1, (2, 6)), 
         "right_hand": (2, (2, 6)), 
@@ -31,13 +32,15 @@ class BNCI2014001(MiEegDataset):
     ]
     def __init__(self, local_path=None):
         super().__init__(
-            uid='bnci2014001',
+            uid="bnci2014001",
             subjects=list(range(0, 9)),
+            paradigms=["mi-eeg"],
             events=self._EVENTS,
             channels=self._CHANNELS,
             srate=250,
-            local_path=local_path)
-    
+            local_path=local_path,
+        )
+
     def _data_path(self,
         subject_id,
         local_path=None,
@@ -45,7 +48,7 @@ class BNCI2014001(MiEegDataset):
         proxies=None):
         if subject_id not in self.subjects:
             raise ValueError("Invalid subject id")
-        
+
         url = '{:s}001-2014/A{:02d}'.format(BNCI_URL, subject_id+1)
 
         dests = [
@@ -98,7 +101,8 @@ class BNCI2014001(MiEegDataset):
             sess['session_{:d}'.format(isess)] = runs
         return sess
 
-class BNCI2014004(MiEegDataset):
+
+class BNCI2014004(BaseEEGDataset):
     _EVENTS = {
         "left_hand": (1, (3, 7.5)), 
         "right_hand": (2, (3, 7.5)), 
@@ -109,13 +113,15 @@ class BNCI2014004(MiEegDataset):
     ]
     def __init__(self, local_path=None):
         super().__init__(
-            uid='bnci2014004',
+            uid="bnci2014004",
             subjects=list(range(0, 9)),
+            paradigms=["mi-eeg"],
             events=self._EVENTS,
             channels=self._CHANNELS,
             srate=250,
-            local_path=local_path)
-    
+            local_path=local_path,
+        )
+
     def _data_path(self,
         subject_id,
         local_path=None,
@@ -123,7 +129,7 @@ class BNCI2014004(MiEegDataset):
         proxies=None):
         if subject_id not in self.subjects:
             raise ValueError("Invalid subject id")
-        
+
         url = '{:s}004-2014/B{:02d}'.format(BNCI_URL, subject_id+1)
 
         dests = [

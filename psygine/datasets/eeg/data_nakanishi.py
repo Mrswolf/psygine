@@ -9,13 +9,14 @@ import numpy as np
 from mne import create_info
 from mne.io import RawArray
 from mne.channels import make_standard_montage
-from .base import SsvepEegDataset
+from .base import BaseEEGDataset, SsvepMixin
 from ..utils.network import get_data_path
 from ..utils.io import loadmat
 
 Nakanishi2015_URL = "https://github.com/mnakanishi/12JFPM_SSVEP/raw/master/data/"
 
-class Nakanishi2015(SsvepEegDataset):
+
+class Nakanishi2015(SsvepMixin, BaseEEGDataset):
     _CHANNELS = ['PO7', 'PO3', 'POZ', 'PO4', 'PO8', 'O1', 'OZ', 'O2']
     _FREQS = [
         9.25, 11.25, 13.25, 9.75, 11.75, 13.75, 10.25, 12.25, 14.25, 10.75, 12.75, 14.75
@@ -31,14 +32,16 @@ class Nakanishi2015(SsvepEegDataset):
     }
     def __init__(self, local_path=None):
         super().__init__(
-            uid='nakanishi2015', 
+            uid="nakanishi2015",
             subjects=list(range(0, 10)),
-            events=self._EVENTS, 
-            channels=self._CHANNELS, 
+            paradigms=["ssvep-eeg"],
+            events=self._EVENTS,
+            channels=self._CHANNELS,
             srate=256,
             freq_phase_table=self._FREQ_PHASE_TABLE,
-            local_path=local_path)
-    
+            local_path=local_path,
+        )
+
     def _data_path(self,
         subject_id,
         local_path=None,
@@ -46,18 +49,18 @@ class Nakanishi2015(SsvepEegDataset):
         proxies=None):
         if subject_id not in self.subjects:
             raise ValueError("Invalid subject id.")
-        
+
         url = '{:s}s{:d}.mat'.format(Nakanishi2015_URL, subject_id+1)
         file_dest = get_data_path(url, self.uid, 
             path=local_path, proxies=proxies, force_update=force_update)
-        
+
         dests = [
             [
                 file_dest
             ]
         ]
         return dests
-    
+
     def _get_single_subject_data(self, subject_id):
         montage = make_standard_montage('standard_1005')
         montage.rename_channels({ch_name: ch_name.upper() for ch_name in montage.ch_names})
@@ -91,4 +94,3 @@ class Nakanishi2015(SsvepEegDataset):
             'session_0': {'run_0': raw}
         }
         return sess
-

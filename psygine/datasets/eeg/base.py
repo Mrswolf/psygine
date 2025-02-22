@@ -10,7 +10,7 @@ from abc import abstractmethod
 from ..base import BaseDataset
 
 
-class BaseEegDataset(BaseDataset):
+class BaseEEGDataset(BaseDataset):
     r"""Base EEG Dataset.
 
     Parameters
@@ -20,7 +20,7 @@ class BaseEegDataset(BaseDataset):
     subjects : list
         A list of available subject ids.
     paradigms : list
-        A list of valid paradigm uids.
+        A list of valid paradigm uids, e.g., mi-eeg, ssvep-eeg.
     events : dict
         A dictionary containing all available events, including ids and intervals.
     channels : list
@@ -29,13 +29,15 @@ class BaseEegDataset(BaseDataset):
         The sampling rate of the dataset.
     local_path: str, optional
         The local path to store remote data.
+    freq_phase_table : dict, optional
+        A dictionary containing frequencies and phases.
 
     Attributes
     ----------
     uid : str
         The unique id for the current dataset.
     subjects : list
-        All available subject ids.
+        All available subject ids, indexed from 0.
     paradigms : list
         All valid paradigm uids.
     events : list
@@ -50,7 +52,17 @@ class BaseEegDataset(BaseDataset):
         The sampling rate of the dataset.
     """
 
-    def __init__(self, uid, subjects, paradigms, events, channels, srate, local_path=None):
+    def __init__(
+        self,
+        uid,
+        subjects,
+        paradigms,
+        events,
+        channels,
+        srate,
+        local_path=None,
+        freq_phase_table=None,
+    ):
         super().__init__(uid)
         self._subject_ids = subjects
         self._valid_paradigms = paradigms
@@ -58,6 +70,7 @@ class BaseEegDataset(BaseDataset):
         self._dataset_channels = [ch.upper() for ch in channels]
         self._srate = srate
         self.local_path = local_path
+        self._freq_phase_table = freq_phase_table
 
     @property
     def subjects(self):
@@ -105,6 +118,11 @@ class BaseEegDataset(BaseDataset):
             Whether to force update local files, default False.
         proxies : dict
             Proxy settings from the Request package.
+
+        Returns
+        -------
+        dests : list
+            A list of list of local file paths, structured in session->run order.
         """
 
     def __getitem__(self, subject_id):
@@ -231,49 +249,11 @@ class BaseEegDataset(BaseDataset):
         return self.__str__()
 
 
-class SsvepEegDataset(BaseEegDataset):
-    r"""SSVEP EEG Dataset.
+class SsvepMixin:
+    r"""SSVEP Mixin.
 
-    Parameters
-    ----------
-    uid : str
-        The unique string id to identify the dataset.
-    subjects : list
-        A list of available subject ids.
-    events : dict
-        A dictionary containing all available events, including ids and intervals.
-    channels : list
-        A list of available channel names.
-    srate : int or float
-        The sampling rate of the dataset.
-    freq_phase_table : dict
-        A dictionary containing frequencies and phases.
-    local_path: str, optional
-        The local path to store remote data.
-
-    Attributes
-    ----------
-    uid : str
-        The unique id for the current dataset.
-    subjects : list
-        All available subject ids.
-    paradigms : list
-        All valid paradigm uids.
-    events : list
-        All available event names.
-    intervals : list
-        All available event intervals.
-    event_ids : list
-        All available event ids.
-    channels : list
-        All available channel names.
-    srate : int or float
-        The sampling rate of the dataset.
+    Special functions for SSVEP datasets.
     """
-
-    def __init__(self, uid, subjects, events, channels, srate, freq_phase_table, local_path=None):
-        super().__init__(uid, subjects, ["ssvep-eeg"], events, channels, srate, local_path=local_path)
-        self._freq_phase_table = freq_phase_table
 
     def get_event_frequency(self, event):
         r"""Get event frequency.
@@ -310,47 +290,3 @@ class SsvepEegDataset(BaseEegDataset):
             return self._freq_phase_table[event][1]
         elif isinstance(event, list):
             return [self._freq_phase_table[e][1] for e in event]
-
-
-class MiEegDataset(BaseEegDataset):
-    r"""MI EEG Dataset.
-
-    Parameters
-    ----------
-    uid : str
-        The unique string id to identify the dataset.
-    subjects : list
-        A list of available subject ids.
-    events : dict
-        A dictionary containing all available events, including ids and intervals.
-    channels : list
-        A list of available channel names.
-    srate : int or float
-        The sampling rate of the dataset.
-    freq_phase_table : dict
-        A dictionary containing frequencies and phases.
-    local_path: str, optional
-        The local path to store remote data.
-
-    Attributes
-    ----------
-    uid : str
-        The unique id for the current dataset.
-    subjects : list
-        All available subject ids.
-    paradigms : list
-        All valid paradigm uids.
-    events : list
-        All available event names.
-    intervals : list
-        All available event intervals.
-    event_ids : list
-        All available event ids.
-    channels : list
-        All available channel names.
-    srate : int or float
-        The sampling rate of the dataset.
-    """
-
-    def __init__(self, uid, subjects, events, channels, srate, local_path=None):
-        super().__init__(uid, subjects, ["mi-eeg"], events, channels, srate, local_path=local_path)
