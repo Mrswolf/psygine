@@ -47,7 +47,7 @@ class BNCI2014001(BaseEEGDataset):
         force_update=False,
         proxies=None):
         if subject_id not in self.subjects:
-            raise ValueError("Invalid subject id")
+            raise IndexError("Invalid subject id")
 
         url = '{:s}001-2014/A{:02d}'.format(BNCI_URL, subject_id+1)
 
@@ -128,7 +128,7 @@ class BNCI2014004(BaseEEGDataset):
         force_update=False,
         proxies=None):
         if subject_id not in self.subjects:
-            raise ValueError("Invalid subject id")
+            raise IndexError("Invalid subject id")
 
         url = '{:s}004-2014/B{:02d}'.format(BNCI_URL, subject_id+1)
 

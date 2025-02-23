@@ -42,7 +42,7 @@ class AlexMI(BaseEEGDataset):
         force_update=False,
         proxies=None):
         if subject_id not in self.subjects:
-            raise ValueError("Invalid subject id")
+            raise IndexError("Invalid subject id")
 
         url = '{:s}subject{:d}.raw.fif'.format(ALEX_URL, subject_id+1)
         dests = [

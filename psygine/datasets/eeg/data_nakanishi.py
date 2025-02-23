@@ -48,7 +48,7 @@ class Nakanishi2015(SsvepMixin, BaseEEGDataset):
         force_update=False,
         proxies=None):
         if subject_id not in self.subjects:
-            raise ValueError("Invalid subject id.")
+            raise IndexError("Invalid subject id.")
 
         url = '{:s}s{:d}.mat'.format(Nakanishi2015_URL, subject_id+1)
         file_dest = get_data_path(url, self.uid, 

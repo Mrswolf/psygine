@@ -93,7 +93,7 @@ class Wang2016(SsvepMixin, BaseEEGDataset):
         force_update=False,
         proxies=None):
         if subject_id not in self.subjects:
-            raise ValueError("Invalid subject id.")
+            raise IndexError("Invalid subject id.")
         # format url
         url = "{:s}S{:d}.mat.7z".format(Wang2016_URL, subject_id+1)
         file_dest = get_data_path(url, 'tsinghua',
@@ -220,7 +220,7 @@ class Beta(SsvepMixin, BaseEEGDataset):
         force_update=False,
         proxies=None):
         if subject_id not in self.subjects:
-            raise ValueError("Invalid subject id.")
+            raise IndexError("Invalid subject id.")
         subject_id = subject_id + 1
         if subject_id < 11:
             url = '{:s}S1-S10.tar.gz'.format(BETA_URL)
@@ -329,7 +329,7 @@ class EldBeta(SsvepMixin, BaseEEGDataset):
         force_update=False,
         proxies=None):
         if subject_id not in self.subjects:
-            raise ValueError("Invalid subject id.")
+            raise IndexError("Invalid subject id.")
         subject_id = subject_id + 1
         if subject_id >= 1 and subject_id <= 13:
             magic_key = 34516952 + (subject_id-1)*3
