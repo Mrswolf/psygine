@@ -33,7 +33,9 @@ dependencies = [
   "nibabel",
   "pillow",
   "opencv-python",
-  "ismrmrd"
+  "ismrmrd",
+  "gdown",
+  "rarfile"
 ]
 
 [project.urls]
