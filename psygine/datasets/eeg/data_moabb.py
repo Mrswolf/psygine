@@ -110,17 +110,18 @@ def check_moabb_events(events, interval):
 
 def check_moabb_rawdata(rawdata):
     data = dict()
-    for sess_id, runs in rawdata.items():
+    for sess_id, (old_sess_id, runs) in enumerate(rawdata.items()):
         data[f"session_{sess_id}"] = dict()
-        for run_id, raw in runs.items():
+        for run_id, (old_run_id, raw) in enumerate(runs.items()):
             data[f"session_{sess_id}"][f"run_{run_id}"] = raw
     return data
 
 
 def moabb_wrapper(cls, srate=None, channels=None):
     class BaseMOABBDataset(BaseEEGDataset):
-        def __init__(self, local_path=None):
-            self._moabb = cls()
+
+        def __init__(self, local_path=None, **kwargs):
+            self._moabb = cls(**kwargs)
             super().__init__(
                 self._moabb.code,
                 check_moabb_subjects(self._moabb.subject_list),
