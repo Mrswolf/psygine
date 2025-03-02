@@ -300,7 +300,7 @@ class BaseSlopedPWL(BasePWLX):
         old_shape = x.shape
         x = self.unpack_input(x)
         bs = x.shape[0]
-        sorted_x_positions = self.get_sorted_x_positions().cuda()
+        sorted_x_positions = self.get_sorted_x_positions().to(device=x.device)
         skips = torch.roll(sorted_x_positions, shifts=-1, dims=1) - sorted_x_positions
         slopes = self.get_slopes()
         skip_deltas = skips * slopes[:, 1:]
@@ -525,10 +525,13 @@ class ProximalLayer(nn.Module):
 
 
 class ADMMCSNet(nn.Module):
-    def __init__(self, mask, L, kernel_size, num_breakpoints=101, Nt=1, Ns=9):
+
+    def __init__(self, mask, L, kernel_size=5, num_breakpoints=101, Nt=1, Ns=9):
         super().__init__()
         self.Ns = Ns
-        self.mask = nn.Parameter(mask, requires_grad=False)
+        self.mask = nn.Parameter(
+            torch.tensor(mask, dtype=torch.float32), requires_grad=False
+        )
 
         self.proximal_layer = ProximalLayer(
             1, L, kernel_size, num_breakpoints=num_breakpoints, Nt=Nt
