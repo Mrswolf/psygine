@@ -14,7 +14,6 @@ from .data_moabb import (
     Ofner2017,
     Schirrmeister2017,
     Shin2017A,
-    Shin2017B,
     Stieger2021,
     Weibo2014,
     Zhou2016,

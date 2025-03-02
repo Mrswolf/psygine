@@ -10,3 +10,4 @@ from .svd import *
 from .fourier import *
 from .cr import *
 from .proxmap import *
+from .metrics import *

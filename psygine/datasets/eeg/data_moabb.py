@@ -82,8 +82,7 @@ from moabb.datasets import (
     # PhysionetMI,# broken apis
     Schirrmeister2017,
     Shin2017A,
-    Shin2017B,
-    Stieger2021,
+    Stieger2021,  # broken connections
     Weibo2014,
     Zhou2016,
 )
@@ -461,7 +460,5 @@ Ofner2017 = moabb_wrapper(Ofner2017, 512)
 Liu2024 = moabb_wrapper(Liu2024, 500)
 
 Shin2017A = moabb_wrapper(Shin2017A, 200)
-
-Shin2017B = moabb_wrapper(Shin2017B, 200)
 
 Stieger2021 = moabb_wrapper(Stieger2021, 1000)

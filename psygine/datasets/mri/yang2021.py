@@ -35,7 +35,7 @@ class _BaseYang2021(BaseDataset):
         data = self._load_data(
             self._data_path(idx, local_path=self.local_path, force_update=False)
         )
-        return data.data.train, data.data.label
+        return data["data"]["data"]["train"], data["data"]["data"]["label"]
 
     def _data_path(self, idx, local_path=None, force_update=False, proxies=None):
         key = "PSYGINE_DATASETS_{:s}_PATH".format(self.uid.upper())
