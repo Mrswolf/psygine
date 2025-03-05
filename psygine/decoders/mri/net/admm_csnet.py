@@ -529,15 +529,28 @@ class ADMMCSNet(nn.Module):
     def __init__(self, mask, L, kernel_size=5, num_breakpoints=101, Nt=1, Ns=9):
         super().__init__()
         self.Ns = Ns
-        self.mask = nn.Parameter(
-            torch.tensor(mask, dtype=torch.float32), requires_grad=False
-        )
+        self.register_buffer("mask", torch.tensor(mask, dtype=torch.float32))
 
         self.proximal_layer = ProximalLayer(
             1, L, kernel_size, num_breakpoints=num_breakpoints, Nt=Nt
         )
         self.recon_layer = ReconLayer()
         self.multiplier_layer = MultiplierLayer()
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        self.proximal_layer.conv1.weight = nn.init.normal_(
+            self.proximal_layer.conv1.weight, mean=0, std=1
+        )
+        self.proximal_layer.conv2.weight = nn.init.normal_(
+            self.proximal_layer.conv2.weight, mean=0, std=1
+        )
+        self.proximal_layer.conv1.weight.data = (
+            self.proximal_layer.conv1.weight.data * 0.025
+        )
+        self.proximal_layer.conv2.weight.data = (
+            self.proximal_layer.conv2.weight.data * 0.025
+        )
 
     def forward(self, y):
         x = self.recon_layer(self.mask, y)
