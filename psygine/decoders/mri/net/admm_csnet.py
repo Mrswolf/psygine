@@ -19,6 +19,7 @@ __all__ = [
     "MultiplierLayer",
     "ProximalLayer",
     "ADMMCSNet",
+    "MyPWL",
 ]
 
 
@@ -428,6 +429,38 @@ class MonoPWL(PWL):
         )
 
 
+class MyPWL(nn.Module):
+    def __init__(self, in_channels, num_cpnts):
+        super().__init__()
+        self.num_cpnts = num_cpnts
+        self.register_buffer("delta_t", torch.tensor([1 / (num_cpnts - 1)]))
+        self.register_buffer("cpnts", torch.linspace(-1, 1, steps=num_cpnts))
+        self.slopes = nn.Parameter(
+            torch.randn(in_channels, num_cpnts + 1), requires_grad=True
+        )
+        self.bias = nn.Parameter(torch.randn(in_channels), requires_grad=True)
+
+    def forward(self, x):
+        cumbias = torch.cumsum(self.slopes[:, 1:-1] * self.delta_t, dim=1)
+        cumbias = torch.cat(
+            (torch.zeros(cumbias.shape[0], 1, device=cumbias.device), cumbias), dim=1
+        )
+        cumbias += self.bias.view(-1, 1)
+
+        ind = torch.searchsorted(self.cpnts, x, side="right")
+        selected_slopes = torch.gather(
+            self.slopes.expand(x.shape[0], -1, -1), 2, ind.view(*x.shape[:2], -1)
+        ).view(*x.shape)
+        ind = ind - 1
+        ind[ind < 0] = 0
+        selected_cpnts = self.cpnts[ind]
+        selected_bias = torch.gather(
+            cumbias.expand(x.shape[0], -1, -1), 2, ind.view(*x.shape[:2], -1)
+        ).view(*x.shape)
+        x = (x - selected_cpnts) * selected_slopes + selected_bias
+        return x
+
+
 class ReconLayer(nn.Module):
     def __init__(self):
         super().__init__()
@@ -504,7 +537,8 @@ class ProximalLayer(nn.Module):
             stride=1,
             padding=kernel_size // 2,
         )
-        self.nonlinear_layer = PWL(L, num_breakpoints=num_breakpoints)
+        # self.nonlinear_layer = PWL(L, num_breakpoints=num_breakpoints)
+        self.nonlinear_layer = MyPWL(L, num_breakpoints)
 
     def forward(self, z):
         z0 = z.clone()
