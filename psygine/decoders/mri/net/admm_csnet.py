@@ -659,8 +659,7 @@ class ConvolutionLayer2(nn.Module):
 class NonlinearLayer(nn.Module):
     def __init__(self, in_channels, num_breakpoints):
         super(NonlinearLayer, self).__init__()
-        # self.pwl = PWL(num_channels=in_channels, num_breakpoints=num_breakpoints)
-        self.pwl = EfficientPWL(in_channels, num_breakpoints)
+        self.pwl = PWL(num_channels=in_channels, num_breakpoints=num_breakpoints)
 
     def forward(self, x):
         conv1_output = x["conv1_output"]
@@ -769,7 +768,7 @@ class ReconLayer(nn.Module):
         denom = torch.add(mask, self.rho)  # rho*I + S, where S is the smapling mask
         # avoid division by zero
         # (rho*I + S)^-1 * S^H*y
-        x = torch.where(denom != 0, b, 0) / torch.where(denom != 0, denom, 1)
+        x = torch.where(denom != 0, b / denom, 0)
         # F^H*(rho*I + S)^-1 * S^H*y
         x = torch.fft.ifft2(x)
         return x
@@ -778,9 +777,7 @@ class ReconLayer(nn.Module):
 class MultiplierLayer(nn.Module):
     def __init__(self):
         super().__init__()
-        self.gamma = nn.Parameter(
-            torch.tensor([1.0], dtype=torch.float32), requires_grad=True
-        )
+        self.gamma = nn.Parameter(torch.tensor([1.0]), requires_grad=True)
 
     def forward(self, x, z, beta=None):
         """
@@ -799,9 +796,7 @@ class ProximalLayer(nn.Module):
     def __init__(self, in_chan, L, kernel_size, num_breakpoints=101, Nt=1):
         super().__init__()
         self.Nt = Nt
-        self.miu1 = nn.Parameter(
-            torch.tensor([0.5], dtype=torch.float32), requires_grad=True
-        )
+        self.miu1 = nn.Parameter(torch.tensor([0.5]), requires_grad=True)
         self.conv1 = nn.Conv2d(
             in_chan,
             L,
@@ -871,7 +866,7 @@ class ADMMCSNet(nn.Module):
 
         for _ in range(self.Ns):
             x = self.recon_layer(self.mask, y, z, beta)
-            z = self.proximal_layer(z)
+            z = self.proximal_layer(x + beta)
             beta = self.multiplier_layer(x, z, beta)
 
         x = self.recon_layer(self.mask, y, z, beta)

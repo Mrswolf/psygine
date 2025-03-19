@@ -25,7 +25,7 @@ class _BaseYang2021(BaseDataset):
 
     def __len__(self):
         if self.isTrain:
-            return 99
+            return 100
         if self.isValid:
             return 50
         if self.isTest:
