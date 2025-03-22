@@ -15,10 +15,9 @@ from PIL import Image
 from .base import PairImageDataset
 from ..utils.network import get_data_path
 
-GOPRO_GOOGLE_URL = "https://drive.google.com/uc?export=download&id=1y4wvPdOG3mojpFCHTqLgriexhbjoWVkK"
-GOPRO_SNU_URL = "http://data.cv.snu.ac.kr:8008/webdav/dataset/GOPRO/GOPRO_Large.zip"
-GOPRO_LOCAL_URL = "/GOPRO_Large.zip"
-# TODO: How to download the dataset from the Google Drive URL?
+GOPRO_HUGGINGFACE_URL = (
+    "https://huggingface.co/datasets/snah/GOPRO_Large/resolve/main/GOPRO_Large.zip"
+)
 
 class _GoProDataset(PairImageDataset):
     def __init__(self, isTrain=True, local_path=None, prefetch=False):
@@ -49,10 +48,12 @@ class _GoProDataset(PairImageDataset):
     def _data_path(self, idx, local_path=None, force_update=False, proxies=None):
         if self.imageY_list is not None and self.imageX_list is not None:
             return (self.imageX_list[idx], self.imageY_list[idx])
-        
+
         if local_path is not None:
             self.local_path = local_path
-        file_dest = get_data_path(GOPRO_LOCAL_URL, "gopro", self.local_path, force_update, proxies)
+        file_dest = get_data_path(
+            GOPRO_HUGGINGFACE_URL, "gopro", self.local_path, force_update, proxies
+        )
         parent_dir = Path(file_dest).parent
         domain = "train" if self.isTrain else "test"
         if not op.exists(op.join(parent_dir, domain)):
@@ -76,7 +77,7 @@ class _GoProDataset(PairImageDataset):
         self.imageX_list = X
         self.imageY_list = Y
         return (self.imageX_list[idx], self.imageY_list[idx])
-    
+
     def _load_data(self, path):
         return np.array(Image.open(path))
 
