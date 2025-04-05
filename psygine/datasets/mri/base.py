@@ -3,14 +3,21 @@
 # Authors: Swolf <swolfforever@gmail.com>
 # Date: 2023/03/12
 # License: MIT License
-"""Base MR Dataset Design.
-"""
+"""Base MR Dataset Design."""
 from ..base import BaseDataset
 
 import ctypes
 import os.path as op
 import ismrmrd
 import ismrmrd.xsd
+from ismrmrd.xsd import (
+    matrixSizeType,
+    fieldOfViewMm,
+    limitType,
+    trajectoryType,
+    trajectoryDescriptionType,
+    parallelImagingType,
+)
 import numpy as np
 import pandas as pd
 
@@ -218,3 +225,73 @@ class RawMRI:
             data = np.array(data)
         meta = self._raw_kdata_meta[bMask].reset_index()
         return data, meta
+
+    def get_protocol(self):
+        return self._header
+
+    def _format_ismrmrd_types(self, root, attrList):
+        def _format_ismrmrd_type(name, attrValue):
+            if isinstance(attrValue, (matrixSizeType, fieldOfViewMm)):
+                fstr = f"{name}:{[attrValue.x, attrValue.y, attrValue.z]}"
+            elif isinstance(attrValue, limitType):
+                fstr = f"{name}:{attrValue.minimum}-{attrValue.maximum}({attrValue.center})"
+            elif attrValue is None:
+                fstr = f"{name}:"
+            return fstr, attrValue
+
+        return [_format_ismrmrd_type(attr, getattr(root, attr)) for attr in attrList]
+
+    def __str__(self):
+        encs = self._header.encoding
+        desc_str = """
+EncodingSpace:{i}
+    EncodedSpace(x,y,z):
+        {encStr}
+    ReconSpace(x,y,z):
+        {reconStr}
+    EncodingLimits(min-max(center)):
+        {encLimitsStr}
+            """
+        desc = ""
+        for i, enc in enumerate(encs):
+            encList = self._format_ismrmrd_types(
+                enc.encodedSpace, ["matrixSize", "fieldOfView_mm"]
+            )
+            encStr = " ".join([fstr for fstr, value in encList])
+            reconList = self._format_ismrmrd_types(
+                enc.reconSpace, ["matrixSize", "fieldOfView_mm"]
+            )
+            reconStr = " ".join([fstr for fstr, value in reconList])
+            encLimitsList = self._format_ismrmrd_types(
+                enc.encodingLimits,
+                [
+                    "kspace_encoding_step_0",
+                    "kspace_encoding_step_1",
+                    "kspace_encoding_step_2",
+                    "average",
+                    "slice",
+                    "contrast",
+                    "phase",
+                    "repetition",
+                    "set",
+                    "segment",
+                    "user_0",
+                    "user_1",
+                    "user_2",
+                    "user_3",
+                    "user_4",
+                    "user_5",
+                    "user_6",
+                    "user_7",
+                ],
+            )
+            encLimitsStr = "\n        ".join(
+                [fstr for fstr, value in encLimitsList if value is not None]
+            )
+            desc += desc_str.format(
+                i=i,
+                encStr=encStr,
+                reconStr=reconStr,
+                encLimitsStr=encLimitsStr,
+            )
+        return desc
