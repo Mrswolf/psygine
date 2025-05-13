@@ -8,6 +8,7 @@ from ..base import BaseDataset
 
 import ctypes
 import os.path as op
+from abc import abstractmethod
 import ismrmrd
 import ismrmrd.xsd
 from ismrmrd.xsd import (
@@ -295,3 +296,41 @@ EncodingSpace:{i}
                 encLimitsStr=encLimitsStr,
             )
         return desc
+
+
+class BaseMRIDataset(BaseDataset):
+    """Base MRI dataset class.
+
+    Parameters
+    ----------
+    uid : str
+        Unique identifier for the dataset.
+    """
+
+    def __init__(self, uid, local_path=None):
+        super().__init__(uid)
+        self.local_path = local_path
+
+    def __getitem__(self, idx):
+        return self._get_single_subject_data(idx)
+
+    @abstractmethod
+    def _data_path(self, idx, local_path=None, force_update=False, proxies=None):
+        pass
+
+    @abstractmethod
+    def _get_single_subject_data(self, idx):
+        pass
+
+    def download_all(self, local_path=None, force_update=False, proxies=None):
+        """Download all data in the dataset."""
+        if local_path is not None:
+            self.local_path = local_path
+
+        for idx in range(len(self)):
+            self._data_path(
+                idx,
+                local_path=self.local_path,
+                force_update=force_update,
+                proxies=proxies,
+            )
