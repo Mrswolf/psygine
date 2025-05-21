@@ -103,9 +103,7 @@ def generate_mri_coil_sensitivities(
     Returns
     -------
     sens : np.ndarray
-        Complex sensitivity array of shape (ncoils, nz, ny, nx), dtype=complex64.
-        Each entry sens[j, k, i, l] gives the simulated B1+ sensitivity
-        of coil j at voxel (l, i, k), including noise.
+        Complex sensitivity array of shape (ncoils, nx, ny, nz), dtype=complex64.
     """
     # Physical constants
     gamma = 42.58e6  # Hz/T, gyromagnetic ratio
@@ -127,7 +125,7 @@ def generate_mri_coil_sensitivities(
     cz = coil_radius * np.cos(phi)
 
     # Output container
-    sens = np.zeros((ncoils, nz, ny, nx), dtype=np.complex64)
+    sens = np.zeros((ncoils, nx, ny, nz), dtype=np.complex64)
     eps = 1e-8
     sigma = smoothing_width * coil_radius
 
@@ -157,8 +155,8 @@ def generate_mri_coil_sensitivities(
         phasor = np.exp(1j * phase)
 
         vol = mag * phasor  # shape: (ny, nx, nz)
-        # Store in output array with axes ordered (nz, ny, nx)
-        sens[j] = np.transpose(vol, (2, 0, 1))
+        # Store in output array with axes ordered (nx, ny, nz)
+        sens[j] = np.transpose(vol, (1, 0, 2))
 
     return sens
 
@@ -170,19 +168,19 @@ def show_coils(sens: np.ndarray) -> None:
     Parameters
     ----------
     sens : np.ndarray
-        Complex sensitivity maps, shape (ncoils, nz, ny, nx).
+        Complex sensitivity maps, shape (ncoils, nx, ny, nz).
 
     Returns
     -------
     None
     """
-    ncoils, nz, ny, nx = sens.shape
+    ncoils, nx, ny, nz = sens.shape
     n_display = min(4, ncoils)
     cz = nz // 2
 
     fig, axes = plt.subplots(2, n_display, figsize=(3 * n_display, 6))
     for i in range(n_display):
-        slice_data = sens[i, cz]
+        slice_data = sens[i, :, :, cz]
         mag = np.abs(slice_data)
         phs = np.angle(slice_data)
 

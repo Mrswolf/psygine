@@ -10,7 +10,7 @@ https://github.com/mikgroup/espirit-python/blob/master/espirit.py
 import time
 import numpy as np
 from psygine.decoders.utils.fourier import fftnc, ifftnc
-from scipy.linalg import svd
+from scipy.linalg import svd, eigh
 from joblib import Parallel, delayed
 
 __all__ =['espirit', 'espirit_proj3d']
@@ -43,114 +43,89 @@ def set_calib(X, C):
     slices = tuple(slices)
     X[slices] = C
 
-def construct_hankel(C, k):
-    Ns = np.shape(C)[:-1]
-    Nc = np.shape(C)[-1]
-    
-    N_kernel_eles = np.prod(k)
-    N_kernel_dims = np.array(Ns) - np.array(k) + 1
-    N_kernels = np.prod(N_kernel_dims)
-    A = np.zeros((N_kernels, N_kernel_eles * Nc), dtype=C.dtype)
 
-    for i in range(N_kernels):
-        local_idxs = np.unravel_index(i, N_kernel_dims, order='C')
-        local_slices = [slice(idx, idx+k[i]) for i, idx in enumerate(local_idxs)]
-        local_slices.append(slice(0, Nc))
+def construct_hankel(calib_data, kernel_size):
+    """Construct Block-Hankel matrix from calibration data.
+
+    Parameters
+    ----------
+    calib_data : array_like
+        Calibration data of shape (Nc, Nx, Ny, Nz), where Nc is the number of channels.
+    kernel_size : array_like
+        Size of the kernel. Should be of shape (Kx, Ky, Kz).
+
+    Returns
+    -------
+    A : array_like
+        Block-Hankel matrix of shape (N_kernels, np.prod(kernel_size) * Nc), where N_kernels is the number of kernels.
+        Local pathches are flattened along the last axis.
+    """
+    [Nc, Nx, Ny, Nz] = calib_data.shape
+
+    kernel_dims = np.array([Nx, Ny, Nz]) - np.array(kernel_size) + 1
+    Nk = np.prod(kernel_dims)
+    A = np.zeros((Nk, np.prod(kernel_size) * Nc), dtype=calib_data.dtype)
+
+    # let numpy handle the indexing
+    for i in range(Nk):
+        # slide along the last axis
+        local_idxs = np.unravel_index(i, kernel_dims, order="C")
+        local_slices = [slice(0, Nc)]
+        local_slices.extend(
+            [slice(idx, idx + kernel_size[i]) for i, idx in enumerate(local_idxs)]
+        )
         local_slices = tuple(local_slices)
-
-        A[i, :] = C[local_slices].flatten()
+        # flatten the local patch along the last axis
+        A[i, :] = calib_data[local_slices].flatten()
 
     return A
 
-def espirit(X, k, r, t, c):
+
+def espirit(calib_data, kernel_size, map_dims=None, t=0.01, n_components=1):
     """ESPIRiT.
 
     """
     stime = time.time()
-    Ns = np.shape(X)[:-1]
-    Nd = len(Ns)
-    Nc = np.shape(X)[-1]
+    [Nc, Nx, Ny, Nz] = np.shape(calib_data)
+    if map_dims is None:
+        map_dims = (Nx, Ny, Nz)
 
-    if isinstance(r, int):
-        r = [Ns[i] if Ns[i] < r else r for i in range(Nd)]
-    else:
-        for i in range(Nd):
-            r[i] = Ns[i] if Ns[i] < r[i] else r[i]
-    r.append(Nc)
-
-    if isinstance(k, int):
-        k = [r[i] if r[i] < k else k for i in range(Nd)]
-    else:
-        for i in range(Nd):
-            k[i] = r[i] if r[i] < k[i] else k[i]
-
-    C = get_calib(X, r)
-    A = construct_hankel(C, k)
+    A = construct_hankel(calib_data, kernel_size)
     [U, S, Vh] = svd(A, full_matrices=True)
-    V = Vh.conj().T
 
     n_kernels = np.sum(S >= t*S[0])
     # subspace
-    V = V[:, :n_kernels]
+    Vh = Vh[:n_kernels, :]
 
     # Reshape into k-space kernel
-    kernels = np.zeros(np.append(k, (Nc, n_kernels)), dtype=V.dtype)
-    for ik in range(n_kernels):
-        kernels[..., ik] = np.reshape(V[:, ik], np.append(k, Nc))
-
-    # flips it and takes the conjugate
-    # But why?
-    kerimgs = np.zeros(np.append(Ns, (Nc, n_kernels)), dtype=V.dtype)
+    kernels = np.reshape(Vh, (n_kernels, Nc, *kernel_size))
+    # The kernels are in the form of (Nk, Nc, Kx, Ky, Kz)
+    # centering the kernels and iFFT, which is the same as FFT of the conjugate
+    # the kerimgs are in the form of (Nk, Nc, map_dims[0], map_dims[1], map_dims[2])
+    kerimgs = np.zeros((n_kernels, Nc, *map_dims), dtype=calib_data.dtype)
     set_calib(kerimgs, kernels)
+    kerimgs = fftnc(kerimgs, axes=(-3, -2, -1))
+    # M^{-1/2}N^{1/2}
+    kerimgs *= np.sqrt(np.prod(map_dims)) / np.sqrt(np.prod(kernel_size))
 
-    N = np.prod(Ns)
-    for i in range(n_kernels):
-        for j in range(Nc):
-            ker = kerimgs[..., j, i].conj()
-            ker = np.flip(ker)
-            kerimgs[..., j, i] = fftnc(ker) * np.sqrt(N) / np.sqrt(np.prod(k))
-
-    def _espirit_maps(i, kerimgs):
-        idxs = np.unravel_index(i, Ns)
-        Gq = kerimgs[idxs]
-        u, s, vh = svd(Gq, full_matrices=True)
-        return u * (np.square(s) > c)
+    def _espirit_maps(i, j, k, n_components=1):
+        Gq = kerimgs[..., i, j, k]
+        [s, U] = eigh(Gq.conj().T @ Gq)
+        s = s[-n_components:]
+        U = U[:, -n_components:]
+        return U
 
     # Take the point-wise eigenvalue decomposition and keep eigenvalues greater than c
-    # maps = np.zeros((N, Nc, Nc), dtype=kerimgs.dtype)
-    # for i in range(N):
-    #     idxs = np.unravel_index(i, Ns)
-    #     Gq = kerimgs[idxs]
-    #     u, s, vh = svd(Gq, full_matrices=True)
-    #     maps[i, ...] = u * (np.square(s) > c)
-    maps = np.stack(Parallel(n_jobs=-1)(delayed(_espirit_maps)(i, kerimgs) for i in range(N)), axis=0)
-    maps = np.reshape(maps, np.append(Ns, (Nc, Nc)))
+    maps = np.zeros((n_components, Nc, *map_dims), dtype=kerimgs.dtype)
+    maps = np.stack(
+        Parallel(n_jobs=1)(
+            delayed(_espirit_maps)(i, j, k, n_components=n_components)
+            for i in range(map_dims[0])
+            for j in range(map_dims[1])
+            for k in range(map_dims[2])
+        ),
+        axis=0,
+    )
+    maps = np.reshape(maps, (*map_dims, Nc, n_components))
+    maps = np.transpose(maps, (4, 3, 0, 1, 2))
     return maps
-
-def espirit_proj3d(x, maps):
-    """
-    Construct the projection of multi-channel image x onto the range of the ESPIRiT operator. Returns the inner
-    product, complete projection and the null projection.
-
-    Arguments:
-      x: Multi channel image data. Expected dimensions are (sx, sy, sz, nc), where (sx, sy, sz) are volumetric 
-         dimensions and (nc) is the channel dimension.
-      maps: ESPIRiT operator as returned by function: espirit
-
-    Returns:
-      ip: This is the inner product result, or the image information in the ESPIRiT subspace.
-      proj: This is the resulting projection. If the ESPIRiT operator is E, then proj = E E^H x, where H is 
-            the hermitian.
-      null: This is the null projection, which is equal to x - proj.
-    """
-    ip = np.zeros(x.shape).astype(np.complex64)
-    proj = np.zeros(x.shape).astype(np.complex64)
-    for qdx in range(0, maps.shape[4]):
-        for pdx in range(0, maps.shape[3]):
-            ip[:, :, :, qdx] = ip[:, :, :, qdx] + x[:, :, :, pdx] * maps[:, :, :, pdx, qdx].conj()
-
-    for qdx in range(0, maps.shape[4]):
-        for pdx in range(0, maps.shape[3]):
-          proj[:, :, :, pdx] = proj[:, :, :, pdx] + ip[:, :, :, qdx] * maps[:, :, :, pdx, qdx]
-
-    return (ip, proj, x - proj)
