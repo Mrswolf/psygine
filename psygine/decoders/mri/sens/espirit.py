@@ -9,11 +9,16 @@ https://github.com/mikgroup/espirit-python/blob/master/espirit.py
 """
 import time
 import numpy as np
-from scipy.linalg import svd, eigh
+from scipy.linalg import eigh
 from joblib import Parallel, delayed
 from psygine.decoders.utils import fftnc, ifftnc, zcrop, fastsvd
 
-__all__ = ["espirit", "espirit_mikgroup"]
+
+__all__ = [
+    "espirit",
+    "sum_of_diags",
+    "construct_hankel",
+]
 
 
 def construct_hankel(calib_data, kernel_size):
@@ -52,7 +57,51 @@ def construct_hankel(calib_data, kernel_size):
     return A
 
 
-def espirit(
+def sum_of_diags(A, axis1=-2, axis2=-1, L2R=True):
+    """Compute the sum of diagonals and subdiagonals of a matrix
+
+    Parameters
+    ----------
+    A : array_like
+        Input matrix of shape (..., M, ..., M, ...).
+    axis1 : int, optional
+        First axis to sum over. Default is -2.
+    axis2 : int, optional
+        Second axis to sum over. Default is -1.
+    L2R: bool, optional
+        If True, the sums of diagonals are computed from the left bottom to the
+        right top, else the sums of diagonals are computed from the right top to the
+        left bottom. Default is True.
+
+    Returns
+    -------
+    B : array_like
+        The sum of the diagonals and subdiagonals of A, with shape (..., 2 * M - 1, ...)
+        Values are put along the axis2, from the right top to the left bottom.
+    """
+    Ndim = A.ndim
+    if Ndim < 2:
+        raise ValueError("A must be at least 2-dimensional.")
+    if A.shape[axis1] != A.shape[axis2]:
+        raise ValueError("The two dimensions of A must be equal.")
+    M = A.shape[axis2]
+    new_shape = list(np.shape(A))
+    new_shape[axis2] = 2 * M - 1
+    del new_shape[axis1]
+
+    B = np.zeros_like(A, shape=tuple(new_shape))
+    flag = 1 if L2R else -1
+    for i in range(-M + 1, M):
+        new_indices = [
+            slice(None) if j != np.mod(axis2, Ndim) else i + M - 1 for j in range(Ndim)
+        ]
+        del new_indices[axis1]
+        B[tuple(new_indices)] = np.trace(A, offset=flag * i, axis1=axis1, axis2=axis2)
+
+    return B
+
+
+def espirit_Gq(
     k_data,
     calib_size=[24, 24, 24],
     kernel_size=[6, 6, 6],
@@ -64,6 +113,7 @@ def espirit(
     rotphase=False,
     normalize=False,
 ):
+    """This version of ESPIRiT computes the Gq operator, following the same procedure as the original ESPIRiT paper."""
     Nc, Nx, Ny, Nz = k_data.shape
     calib_data = zcrop(k_data, (Nc, *calib_size))
     if map_dims is None:
@@ -104,11 +154,11 @@ def espirit(
 
         U, s, vh = fastsvd(Gq.T, k=n_components, method="matlab")
 
-        if rot_mat is None:
-            # remove the phase ambiguity by using the first coil
-            ref = np.copy(U[0])
-            ref /= np.abs(ref)
-            U *= np.conj(ref)
+        # if rot_mat is None:
+        #     # remove the phase ambiguity by using the first coil
+        #     ref = np.copy(U[0])
+        #     ref /= np.abs(ref)
+        #     U *= np.conj(ref)
 
         # TODO: remove phase ambiguity by using a virtual coil
         # # extract the phase from the first virtual coil
@@ -152,10 +202,144 @@ def espirit(
     return maps
 
 
-# for comparison
+def espirit(
+    k_data,
+    calib_size=[24, 24, 24],
+    kernel_size=[6, 6, 6],
+    map_dims=None,
+    ns_threshold=1e-3,
+    n_maps=1,
+    crop_threshold=0.8,
+    softcrop=False,
+    rotphase=False,
+    normalize=False,
+):
+    """ESPIRiT, improved by using the K matrix.
+
+    Parameters
+    ----------
+    k_data : array_like
+        Multi-channel k-space data of shape (Nc, Nx, Ny, Nz), where Nc
+        is the number of channels and (Nx, Ny, Nz) are the spatial dimensions.
+    calib_size : list of int, optional
+        Calibration region size. Default is [24, 24, 24].
+    kernel_size : list of int, optional
+        Size of the kernel. Default is [6, 6, 6].
+    map_dims : list of int, optional
+        Dimensions of the output maps. If None, it will be set to (Nx, Ny, Nz).
+    ns_threshold : float, optional
+        Threshold for the singular values. Singular values below this threshold
+        times the largest singular value are set to zero. Default is 1e-3.
+    n_maps : int, optional
+        Number of maps to compute. Default is 1.
+    crop_threshold : float, optional
+        Threshold for cropping the maps. Values below this threshold are set to zero.
+        Default is 0.8.
+    softcrop : bool, optional
+        If True, a soft cropping is applied to the maps. Default is False.
+    rotphase : bool, optional
+        If True, the phase ambiguity is removed by using a virtual coil, else by the first coil maps.
+        Default is False.
+    normalize : bool, optional
+        If True, the maps are normalized with L1-norm. Default is False.
+
+    Returns
+    -------
+    maps : array_like
+        ESPIRiT maps of shape (n_maps, Nc, Nx, Ny, Nz), where n_maps is the number of maps,
+        Nc is the number of channels, and (Nx, Ny, Nz) are the spatial dimensions.
+    """
+    Nc, Nx, Ny, Nz = k_data.shape
+    calib_data = zcrop(k_data, (Nc, *calib_size))
+    if map_dims is None:
+        map_dims = (Nx, Ny, Nz)
+
+    # TODO: remove phase ambiguity by using a virtual coil
+    rot_mat = None
+    # if rotphase:
+    #     rot_mat, _ = scc(calib_data, estimator="lwf")
+    #     rot_mat = rot_mat[:, 0].conj().T
+
+    A = construct_hankel(calib_data, kernel_size)
+    U, S, Vh = fastsvd(A, method="matlab")
+
+    n_kernels = np.sum(S >= ns_threshold * S[0])
+    # subspace
+    Vh = Vh[:n_kernels, :]
+    P = Vh.T @ np.conj(Vh)
+    P = np.reshape(P, (Nc, *kernel_size, Nc, *kernel_size))
+    P = np.transpose(P, (0, 4, 1, 5, 2, 6, 3, 7))  # (Nc, Nc, Kx, Kx, Ky, Ky, Kz, Kz)
+    K = sum_of_diags(
+        sum_of_diags(sum_of_diags(P, L2R=False), axis1=-3, axis2=-2, L2R=False),
+        axis1=-4,
+        axis2=-3,
+        L2R=False,
+    )
+    K = zcrop(K, (Nc, Nc, *map_dims))
+    kerimgs = ifftnc(K, axes=(-3, -2, -1))
+    # M^{-1/2}N^{1/2}
+    kerimgs *= np.sqrt(np.prod(map_dims)) / np.sqrt(np.prod(kernel_size))
+
+    def _espirit_maps(
+        i, j, k, n_components=1, rot_mat=None, crop_threshold=0, softcrop=False
+    ):
+        GqGqH = kerimgs[..., i, j, k]
+
+        s, U = eigh(GqGqH)
+        U, s = U[:, ::-1], s[::-1]
+        U = U[:, :n_components]
+
+        # if rot_mat is None:
+        #     # remove the phase ambiguity by using the first coil
+        #     ref = np.copy(U[0])
+        #     ref /= np.abs(ref)
+        #     U *= np.conj(ref)
+
+        # TODO: remove phase ambiguity by using a virtual coil
+        # # extract the phase from the first virtual coil
+        # scale = rot_mat @ U
+        # scale /= np.abs(scale)
+        # U *= np.conj(scale)
+
+        weight = np.abs(U) >= crop_threshold
+        if softcrop:
+            weight = (np.sqrt(np.abs(U)) - crop_threshold) / (1 - crop_threshold)
+            weight[weight < -1] = -1
+            weight[weight > 1] = 1
+            weight = weight / (np.square(weight) + 1) + 0.5
+        U *= weight
+
+        return U
+
+    # Take the point-wise eigenvalue decomposition and keep eigenvalues greater than c
+    maps = np.stack(
+        Parallel(n_jobs=-1)(
+            delayed(_espirit_maps)(
+                i,
+                j,
+                k,
+                n_components=n_maps,
+                rot_mat=rot_mat,
+                crop_threshold=crop_threshold,
+                softcrop=softcrop,
+            )
+            for i in range(map_dims[0])
+            for j in range(map_dims[1])
+            for k in range(map_dims[2])
+        ),
+        axis=0,
+    )
+    maps = np.reshape(maps, (*map_dims, Nc, n_maps))
+    maps = np.transpose(maps, (4, 3, 0, 1, 2))
+    if normalize:
+        # Normalize the maps with L1-norm
+        maps = maps / np.linalg.norm(maps, ord=1, axis=1, keepdims=True)
+    return maps
+
+
 def espirit_mikgroup(X, k, r, t, c):
     """
-    Derives the ESPIRiT operator.
+    ESPIRiT from mikgroup, comparison only.
 
     Arguments:
       X: Multi channel k-space data. Expected dimensions are (sx, sy, sz, nc), where (sx, sy, sz) are volumetric
