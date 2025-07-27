@@ -13,6 +13,16 @@ from scipy.io.matlab import mat_struct
 import mat73
 import mmap
 
+__all__ = [
+    "loadmat",
+    "readjson",
+    "writejson",
+    "readcfl",
+    "writecfl",
+    "readmulticfl",
+    "writemulticfl",
+]
+
 def loadmat(filename):
     """Wrapper of scipy.io loadmat function, works for matv7.3 too.
 
@@ -154,7 +164,7 @@ def set_local_path(key, path):
         writejson(config_path, config)
     return path
 
-# The following code is adapted from bart 
+# The following code is adapted from bart
 # https://github.com/mrirecon/bart/tree/master/python/cfl.py
 
 def readcfl(name):

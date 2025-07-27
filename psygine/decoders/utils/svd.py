@@ -173,14 +173,19 @@ def optimal_svht(m, n, sigma, noise_known=False):
     return tau
 
 
-def fastsvd(A, k=1, method="scipy", random_state=None):
+def fastsvd(A, k=None, method="scipy", random_state=None):
     U, s, Vh = None, None, None
-    rs = np.random.RandomState(random_state)
+    # rs = np.random.RandomState(random_state)
+    if k is None:
+        k = np.min(A.shape)
     if method == "matlab":
-        [U, s, Vh] = svd(A, full_matrices=False, lapack_driver="gesvd")
+        [U, s, Vh] = svd(A, full_matrices=True, lapack_driver="gesvd")
+        U, s, Vh = U[:, :k], s[:k], Vh[:k, :]
+    elif method == "numpy":
+        [U, s, Vh] = np.linalg.svd(A, full_matrices=True)
         U, s, Vh = U[:, :k], s[:k], Vh[:k, :]
     elif method == "scipy":
-        [U, s, Vh] = svd(A, full_matrices=False, lapack_driver="gesdd")
+        [U, s, Vh] = svd(A, full_matrices=True, lapack_driver="gesdd")
         U, s, Vh = U[:, :k], s[:k], Vh[:k, :]
     elif method == "propack":
         [U, s, Vh] = svds(A, k=k, which="LM", solver="propack")

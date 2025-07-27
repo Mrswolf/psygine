@@ -12,6 +12,7 @@ from urllib.request import url2pathname
 from pooch import retrieve, HTTPDownloader, FTPDownloader
 from .io import get_local_path, set_local_path
 
+__all__ = ["get_data_path"]
 
 def _url_to_local_path(url: str, local_path: Union[str, Path]) -> str:
     """Mirror a url path in a local destination with keeping folder structure.
