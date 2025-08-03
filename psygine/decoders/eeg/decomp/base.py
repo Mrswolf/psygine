@@ -9,7 +9,7 @@ from joblib import Parallel, delayed
 
 __all__ = [
     "pearsonr",
-    "generate_ssvep_filterbank",
+    "generate_filterbank",
     "FilterBank",
     "generate_ssvep_reference",
 ]
@@ -52,8 +52,8 @@ def pearsonr(X, Y=None):
     return r
 
 
-def generate_ssvep_filterbank(passbands, stopbands, srate, order=None, rp=0.5):
-    r"""Generate SSVEP filter bank.
+def generate_filterbank(passbands, stopbands, srate, order=None, rp=0.5):
+    r"""Generate filter bank with cheby1.
 
     Parameters
     ----------
