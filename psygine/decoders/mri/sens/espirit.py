@@ -12,7 +12,7 @@ import numpy as np
 from scipy.linalg import eigh
 from joblib import Parallel, delayed
 from psygine.decoders.utils import fftnc, ifftnc, zcrop, fastsvd
-
+from psygine.decoders.mri.cc import calcSCCMtx
 
 __all__ = [
     "espirit", "espirit_Gq", "espirit_mikgroup",
@@ -254,11 +254,10 @@ def espirit(
     if map_dims is None:
         map_dims = (Nx, Ny, Nz)
 
-    # TODO: remove phase ambiguity by using a virtual coil
-    rot_mat = None
-    # if rotphase:
-    #     rot_mat, _ = scc(calib_data, estimator="lwf")
-    #     rot_mat = rot_mat[:, 0].conj().T
+    rot_vec = None
+    if rotphase:
+        rot_vec = calcSCCMtx(calib_data, axis=0)
+        rot_vec = np.conj(rot_vec[:, 0]).T
 
     A = construct_hankel(calib_data, kernel_size)
     U, S, Vh = fastsvd(A, method="matlab")
@@ -289,17 +288,18 @@ def espirit(
         U, s = U[:, ::-1], s[::-1]
         U = U[:, :n_components]
 
-        if rot_mat is None:
-            # remove the phase ambiguity by using the first coil
+        if rot_vec is None:
+            # remove the phase ambiguity
+            # by using the first coil as a reference
             ref = np.copy(U[0])
             ref /= np.abs(ref)
             U *= np.conj(ref)
-
-        # TODO: remove phase ambiguity by using a virtual coil
-        # # extract the phase from the first virtual coil
-        # scale = rot_mat @ U
-        # scale /= np.abs(scale)
-        # U *= np.conj(scale)
+        else:
+            # remove the phase ambiguity 
+            # by using a virtual coil
+            scale = rot_vec @ U
+            scale /= np.abs(scale)
+            U *= np.conj(scale)
 
         weight = np.abs(U) >= crop_threshold
         if softcrop:
@@ -319,7 +319,7 @@ def espirit(
                 j,
                 k,
                 n_components=n_maps,
-                rot_mat=rot_mat,
+                rot_mat=rot_vec,
                 crop_threshold=crop_threshold,
                 softcrop=softcrop,
             )
