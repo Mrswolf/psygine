@@ -15,7 +15,7 @@ from psygine.decoders.utils import fftnc, ifftnc, zcrop, fastsvd
 
 
 __all__ = [
-    "espirit",
+    "espirit", "espirit_Gq", "espirit_mikgroup",
     "sum_of_diags",
     "construct_hankel",
 ]
@@ -154,11 +154,11 @@ def espirit_Gq(
 
         U, s, vh = fastsvd(Gq.T, k=n_components, method="matlab")
 
-        # if rot_mat is None:
-        #     # remove the phase ambiguity by using the first coil
-        #     ref = np.copy(U[0])
-        #     ref /= np.abs(ref)
-        #     U *= np.conj(ref)
+        if rot_mat is None:
+            # remove the phase ambiguity by using the first coil
+            ref = np.copy(U[0])
+            ref /= np.abs(ref)
+            U *= np.conj(ref)
 
         # TODO: remove phase ambiguity by using a virtual coil
         # # extract the phase from the first virtual coil
@@ -289,11 +289,11 @@ def espirit(
         U, s = U[:, ::-1], s[::-1]
         U = U[:, :n_components]
 
-        # if rot_mat is None:
-        #     # remove the phase ambiguity by using the first coil
-        #     ref = np.copy(U[0])
-        #     ref /= np.abs(ref)
-        #     U *= np.conj(ref)
+        if rot_mat is None:
+            # remove the phase ambiguity by using the first coil
+            ref = np.copy(U[0])
+            ref /= np.abs(ref)
+            U *= np.conj(ref)
 
         # TODO: remove phase ambiguity by using a virtual coil
         # # extract the phase from the first virtual coil
@@ -413,14 +413,9 @@ def espirit_mikgroup(X, k, r, t, c):
     kerimgs = np.zeros(np.append(np.shape(X), n)).astype(np.complex64)
     for idx in range(n):
         for jdx in range(nc):
-            # ker = kernels[::-1, ::-1, ::-1, jdx, idx].conj()
-            # kerimgs[:, :, :, jdx, idx] = (
-            #     fftnc(ker, axes) * np.sqrt(sx * sy * sz) / np.sqrt(k**p)
-            # )
+            ker = kernels[::-1, ::-1, ::-1, jdx, idx].conj()
             kerimgs[:, :, :, jdx, idx] = (
-                ifftnc(np.conj(kernels[..., jdx, idx]), axes)
-                * np.sqrt(sx * sy * sz)
-                / np.sqrt(k**p)
+                fftnc(ker, axes) * np.sqrt(sx * sy * sz) / np.sqrt(k**p)
             )
 
     # Take the point-wise eigenvalue decomposition and keep eigenvalues greater than c
@@ -435,5 +430,4 @@ def espirit_mikgroup(X, k, r, t, c):
                 for ldx in range(0, nc):
                     if s[ldx] ** 2 > c:
                         maps[idx, jdx, kdx, :, ldx] = u[:, ldx]
-
     return maps
