@@ -111,6 +111,7 @@ def espirit_Gq(
     crop_threshold=0.8,
     softcrop=False,
     rotphase=False,
+    rotmethod='pca',
     normalize=False,
 ):
     """This version of ESPIRiT computes the Gq operator, following the same procedure as the original ESPIRiT paper."""
@@ -119,11 +120,22 @@ def espirit_Gq(
     if map_dims is None:
         map_dims = (Nx, Ny, Nz)
 
-    # TODO: remove phase ambiguity by using a virtual coil
-    rot_mat = None
-    # if rotphase:
-    #     rot_mat, _ = scc(calib_data, estimator="lwf")
-    #     rot_mat = rot_mat[:, 0].conj().T
+    rot_vec = None
+    if rotphase:
+        if rotmethod == 'pca':
+            rot_vec = calcSCCMtx(calib_data, axis=0)
+            rot_vec = np.conj(rot_vec[:, 0]).T
+        elif rotmethod == 'first':
+            rot_vec = np.zeros((1, Nc), dtype=k_data.dtype)
+            rot_vec[0] = 1
+        elif rotmethod == 'vcc':
+            calib_data = np.concatenate(
+                (calib_data, 
+                 np.flip(np.flip(np.flip(np.conj(calib_data), axis=1), axis=2), axis=3)),
+                 axis=0)
+            Nc *= 2
+        else:
+            raise NotImplementedError(f"rotmethod {rotmethod} is not implemented.")
 
     A = construct_hankel(calib_data, kernel_size)
     U, S, Vh = fastsvd(A, method="matlab")
@@ -148,23 +160,25 @@ def espirit_Gq(
     kerimgs *= np.sqrt(np.prod(map_dims)) / np.sqrt(np.prod(kernel_size))
 
     def _espirit_maps(
-        i, j, k, n_components=1, rot_mat=None, crop_threshold=0, softcrop=False
+        i, j, k, n_components=1, rotphase=False, rot_vec=None, crop_threshold=0, softcrop=False
     ):
         Gq = kerimgs[..., i, j, k]
 
         U, s, vh = fastsvd(Gq.T, k=n_components, method="matlab")
 
-        if rot_mat is None:
-            # remove the phase ambiguity by using the first coil
-            ref = np.copy(U[0])
-            ref /= np.abs(ref)
-            U *= np.conj(ref)
-
-        # TODO: remove phase ambiguity by using a virtual coil
-        # # extract the phase from the first virtual coil
-        # scale = rot_mat @ U
-        # scale /= np.abs(scale)
-        # U *= np.conj(scale)
+        if rotphase:
+            if rot_vec is None:
+                # remove the phase ambiguity by vcc-espirit
+                Nc = U.shape[0]
+                theta = np.imag(np.log(np.sum(U[:Nc//2, :] * U[Nc//2:, :], axis=0))) / 2 # theta + kpi
+                scale = np.cos(theta) - 1j * np.sin(theta)
+                U = U[:Nc//2, :] * scale
+            else:
+                # remove the phase ambiguity 
+                # by using either a virtual coil or the first coil
+                scale = rot_vec @ U
+                scale /= np.abs(scale)
+                U *= np.conj(scale)
 
         weight = np.abs(U) >= crop_threshold
         if softcrop:
@@ -184,7 +198,8 @@ def espirit_Gq(
                 j,
                 k,
                 n_components=n_maps,
-                rot_mat=rot_mat,
+                rotphase=rotphase,
+                rot_vec=rot_vec,
                 crop_threshold=crop_threshold,
                 softcrop=softcrop,
             )
@@ -194,8 +209,20 @@ def espirit_Gq(
         ),
         axis=0,
     )
-    maps = np.reshape(maps, (*map_dims, Nc, n_maps))
-    maps = np.transpose(maps, (4, 3, 0, 1, 2))
+
+    if rotphase and rotmethod == 'vcc':
+        # sign alignment
+        Nc //= 2
+        calib_data = zcrop(calib_data[:Nc], (Nc, Nx, Ny, Nz))
+        calib_data = ifftnc(calib_data, axes=(1, 2, 3))
+        maps = np.reshape(maps, (*map_dims, Nc, n_maps))
+        maps = np.transpose(maps, (4, 3, 0, 1, 2))
+        maps *= np.sign(np.real(maps[:, :1, ...])) * np.sign(np.real(calib_data[0]))
+        
+    else:
+        maps = np.reshape(maps, (*map_dims, Nc, n_maps))
+        maps = np.transpose(maps, (4, 3, 0, 1, 2))
+    
     if normalize:
         # Normalize the maps with L1-norm
         maps = maps / np.linalg.norm(maps, ord=1, axis=1, keepdims=True)
@@ -212,7 +239,9 @@ def espirit(
     crop_threshold=0.8,
     softcrop=False,
     rotphase=False,
+    rotmethod='pca',
     normalize=False,
+    n_jobs=-1
 ):
     """ESPIRiT, improved by using the K matrix.
 
@@ -238,8 +267,10 @@ def espirit(
     softcrop : bool, optional
         If True, a soft cropping is applied to the maps. Default is False.
     rotphase : bool, optional
-        If True, the phase ambiguity is removed by using a virtual coil, else by the first coil maps.
+        If True, the phase ambiguity is removed by rotmethod.
         Default is False.
+    rotmethod: str, optional
+        Avaliable options, 'pca', 'first', 'vcc'. Default is 'pca'.
     normalize : bool, optional
         If True, the maps are normalized with L1-norm. Default is False.
 
@@ -256,8 +287,20 @@ def espirit(
 
     rot_vec = None
     if rotphase:
-        rot_vec = calcSCCMtx(calib_data, axis=0)
-        rot_vec = np.conj(rot_vec[:, 0]).T
+        if rotmethod == 'pca':
+            rot_vec = calcSCCMtx(calib_data, axis=0)
+            rot_vec = np.conj(rot_vec[:, 0]).T
+        elif rotmethod == 'first':
+            rot_vec = np.zeros((1, Nc), dtype=k_data.dtype)
+            rot_vec[0] = 1
+        elif rotmethod == 'vcc':
+            calib_data = np.concatenate(
+                (calib_data, 
+                 np.flip(np.flip(np.flip(np.conj(calib_data), axis=1), axis=2), axis=3)),
+                 axis=0)
+            Nc *= 2
+        else:
+            raise NotImplementedError(f"rotmethod {rotmethod} is not implemented.")
 
     A = construct_hankel(calib_data, kernel_size)
     U, S, Vh = fastsvd(A, method="matlab")
@@ -275,12 +318,12 @@ def espirit(
         L2R=False,
     )
     K = zcrop(K, (Nc, Nc, *map_dims))
-    kerimgs = ifftnc(K, axes=(-3, -2, -1))
-    # M^{-1/2}N^{1/2}
+    kerimgs = ifftnc(K, axes=(-3, -2, -1)) # see my blog post why we use ifftnc here
+    # M^{-1/2}N^{1/2}, a constant factor
     kerimgs *= np.sqrt(np.prod(map_dims)) / np.sqrt(np.prod(kernel_size))
 
     def _espirit_maps(
-        i, j, k, n_components=1, rot_mat=None, crop_threshold=0, softcrop=False
+        i, j, k, n_components=1, rotphase=False, rot_vec=None, crop_threshold=0, softcrop=False
     ):
         GqGqH = kerimgs[..., i, j, k]
 
@@ -288,18 +331,19 @@ def espirit(
         U, s = U[:, ::-1], s[::-1]
         U = U[:, :n_components]
 
-        if rot_vec is None:
-            # remove the phase ambiguity
-            # by using the first coil as a reference
-            ref = np.copy(U[0])
-            ref /= np.abs(ref)
-            U *= np.conj(ref)
-        else:
-            # remove the phase ambiguity 
-            # by using a virtual coil
-            scale = rot_vec @ U
-            scale /= np.abs(scale)
-            U *= np.conj(scale)
+        if rotphase:
+            if rot_vec is None:
+                # remove the phase ambiguity by vcc-espirit
+                Nc = U.shape[0]
+                theta = np.imag(np.log(np.sum(U[:Nc//2, :] * U[Nc//2:, :], axis=0))) / 2 # theta + kpi
+                scale = np.cos(theta) - 1j * np.sin(theta)
+                U = U[:Nc//2, :] * scale
+            else:
+                # remove the phase ambiguity 
+                # by using either a virtual coil or the first coil
+                scale = rot_vec @ U
+                scale /= np.abs(scale)
+                U *= np.conj(scale)
 
         weight = np.abs(U) >= crop_threshold
         if softcrop:
@@ -313,13 +357,14 @@ def espirit(
 
     # Take the point-wise eigenvalue decomposition and keep eigenvalues greater than c
     maps = np.stack(
-        Parallel(n_jobs=-1)(
+        Parallel(n_jobs=n_jobs)(
             delayed(_espirit_maps)(
                 i,
                 j,
                 k,
                 n_components=n_maps,
-                rot_mat=rot_vec,
+                rotphase=rotphase,
+                rot_vec=rot_vec,
                 crop_threshold=crop_threshold,
                 softcrop=softcrop,
             )
@@ -329,10 +374,22 @@ def espirit(
         ),
         axis=0,
     )
-    maps = np.reshape(maps, (*map_dims, Nc, n_maps))
-    maps = np.transpose(maps, (4, 3, 0, 1, 2))
+
+    if rotphase and rotmethod == 'vcc':
+        # sign alignment
+        Nc //= 2
+        calib_data = zcrop(calib_data[:Nc], (Nc, Nx, Ny, Nz))
+        calib_data = ifftnc(calib_data, axes=(1, 2, 3))
+        maps = np.reshape(maps, (*map_dims, Nc, n_maps))
+        maps = np.transpose(maps, (4, 3, 0, 1, 2))
+        maps *= np.sign(np.real(maps[:, :1, ...])) * np.sign(np.real(calib_data[0]))
+        
+    else:
+        maps = np.reshape(maps, (*map_dims, Nc, n_maps))
+        maps = np.transpose(maps, (4, 3, 0, 1, 2))
+    
     if normalize:
-        # Normalize the maps with L1-norm
+        # Normalize the maps with L1-norm, maybe wrong?
         maps = maps / np.linalg.norm(maps, ord=1, axis=1, keepdims=True)
     return maps
 
