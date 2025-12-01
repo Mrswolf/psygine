@@ -14,7 +14,7 @@ from joblib import Parallel, delayed
 from psygine.decoders.utils import fftnc, ifftnc, zcrop, fastsvd
 from psygine.decoders.mri.cc import calcSCCMtx
 
-__all__ = ["espirit"]
+__all__ = ["espirit", "construct_hankel", "sum_of_diags"]
 
 
 def construct_hankel(calib_data, kernel_size):

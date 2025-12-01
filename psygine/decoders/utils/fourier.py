@@ -17,6 +17,8 @@ __all__ = [
     "fftnc",
     "ifftnc",
     "zcrop",
+    "ifft1c_fast",
+    "fft1c_fast"
 ]
 
 
@@ -219,3 +221,55 @@ def zcrop(X, shape):
             d_slices.append(slice(0, d))
     X_dest[tuple(d_slices)] = X[tuple(s_slices)]
     return X_dest
+
+
+def fft1c_fast(X, axis=-1, workers=-1):
+    r"""1d FFT replacing fftshift/ifftshift with phase modulations.
+
+    Parameters
+    ----------
+    X : array_like
+        Input array, can be complex.
+    axis : int, default -1
+        Axis over which to compute the FFT. If not given, the last axis is used.
+
+    Returns
+    -------
+    K : array_like
+        K-space data.
+    """
+    N = X.shape[axis]
+    S = N // 2
+    mod_shape = [1 for _ in range(X.ndim)]
+    mod_shape[axis] = N
+    phase_mod = np.exp(1j*2*np.pi*np.arange(N) * S / N).reshape(mod_shape)
+    scale = np.exp(-1j*2*np.pi * S**2 / N)
+
+    K = scale * phase_mod * fft(X * phase_mod, axis=axis, norm="ortho", workers=workers)
+    return K
+
+
+def ifft1c_fast(K, axis=-1, workers=-1):
+    r"""1d iFFT replacing fftshift/ifftshift with phase modulations.
+
+    Parameters
+    ----------
+    K : array_like
+        Input K space data, can be complex.
+    axis : int, default -1
+        Axis over which to compute the iFFT. If not given, the last axis is used.
+
+    Returns
+    -------
+    X : array_like
+        Original data.
+    """
+    N = K.shape[axis]
+    S = N // 2
+    mod_shape = [1 for _ in range(K.ndim)]
+    mod_shape[axis] = N
+    phase_mod = np.exp(-1j*2*np.pi*np.arange(N) * S / N).reshape(mod_shape)
+    scale = np.exp(1j*2*np.pi * S**2 / N)
+
+    X = scale * phase_mod * ifft(K * phase_mod, axis=axis, norm="ortho", workers=workers)
+    return X

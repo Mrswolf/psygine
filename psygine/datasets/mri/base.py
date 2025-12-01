@@ -242,6 +242,9 @@ class RawMRI:
 
         return [_format_ismrmrd_type(attr, getattr(root, attr)) for attr in attrList]
 
+    def __repr__(self):
+        return self.__str__()
+
     def __str__(self):
         encs = self._header.encoding
         desc_str = """
