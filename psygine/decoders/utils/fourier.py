@@ -17,8 +17,14 @@ __all__ = [
     "fftnc",
     "ifftnc",
     "zcrop",
-    "ifft1c_fast",
-    "fft1c_fast"
+    "ifftmod1",
+    "fftmod1",
+    "fftmod2",
+    "ifftmod2",
+    "fftmod3",
+    "ifftmod3",
+    "fftmodn",
+    "ifftmodn",
 ]
 
 
@@ -223,7 +229,7 @@ def zcrop(X, shape):
     return X_dest
 
 
-def fft1c_fast(X, axis=-1, workers=-1):
+def fftmod1(X, axis=-1, workers=-1):
     r"""1d FFT replacing fftshift/ifftshift with phase modulations.
 
     Parameters
@@ -249,7 +255,7 @@ def fft1c_fast(X, axis=-1, workers=-1):
     return K
 
 
-def ifft1c_fast(K, axis=-1, workers=-1):
+def ifftmod1(K, axis=-1, workers=-1):
     r"""1d iFFT replacing fftshift/ifftshift with phase modulations.
 
     Parameters
@@ -273,3 +279,182 @@ def ifft1c_fast(K, axis=-1, workers=-1):
 
     X = scale * phase_mod * ifft(K * phase_mod, axis=axis, norm="ortho", workers=workers)
     return X
+
+
+def fftmodn(X, axes=None, workers=-1):
+    r"""Nd FFT replacing fftshift/ifftshift with phase modulations.
+
+    Parameters
+    ----------
+    X : array_like
+        Input array, can be complex.
+    axes : tuple of int, optional
+        Axes over which to compute the FFT. If not given, all axes are used.
+    workers : int, default -1
+        Maximum number of workers to use for parallel computation.
+
+    Returns
+    -------
+    K : array_like
+        K-space data.
+    """
+    if axes is None:
+        axes = tuple(range(X.ndim))
+
+    phase_mod = 1
+    scale = 1
+    for axis in axes:
+        N = X.shape[axis]
+        S = N // 2
+        mod_shape = [1] * X.ndim
+        mod_shape[axis] = N
+        phase_mod_axis = np.exp(1j * 2 * np.pi * np.arange(N) * S / N).reshape(mod_shape)
+        scale_axis = np.exp(-1j * 2 * np.pi * S**2 / N)
+        phase_mod = phase_mod * phase_mod_axis
+        scale = scale * scale_axis
+
+    K = scale * phase_mod * fftn(X * phase_mod, axes=axes, norm="ortho", workers=workers)
+    return K
+
+
+def ifftmodn(K, axes=None, workers=-1):
+    r"""Nd iFFT replacing fftshift/ifftshift with phase modulations.
+
+    Parameters
+    ----------
+    K : array_like
+        Input K space data, can be complex.
+    axes : tuple of int, optional
+        Axes over which to compute the iFFT. If not given, all axes are used.
+    workers : int, default -1
+        Maximum number of workers to use for parallel computation.
+
+    Returns
+    -------
+    X : array_like
+        Original data.
+    """
+    if axes is None:
+        axes = tuple(range(K.ndim))
+
+    phase_mod = 1
+    scale = 1
+    for axis in axes:
+        N = K.shape[axis]
+        S = N // 2
+        mod_shape = [1] * K.ndim
+        mod_shape[axis] = N
+        phase_mod_axis = np.exp(-1j * 2 * np.pi * np.arange(N) * S / N).reshape(mod_shape)
+        scale_axis = np.exp(1j * 2 * np.pi * S**2 / N)
+        phase_mod = phase_mod * phase_mod_axis
+        scale = scale * scale_axis
+
+    X = scale * phase_mod * ifftn(K * phase_mod, axes=axes, norm="ortho", workers=workers)
+    return X
+
+
+def fftmod2(X, axes=(-2, -1), workers=-1):
+    r"""2d FFT replacing fftshift/ifftshift with phase modulations.
+
+    Parameters
+    ----------
+    X : array_like
+        Input array, can be complex.
+    axes : int, default (-2, -1)
+        Axes over which to compute the FFT. If not given, the last two axes are used.
+    workers : int, default -1
+        Maximum number of workers to use for parallel computation.
+
+    Returns
+    -------
+    K : array_like
+        K-space data.
+    """
+    phase_mod = 1
+    scale = 1
+    for axis in axes:
+        N = X.shape[axis]
+        S = N // 2
+        mod_shape = [1] * X.ndim
+        mod_shape[axis] = N
+        phase_mod_axis = np.exp(1j * 2 * np.pi * np.arange(N) * S / N).reshape(mod_shape)
+        scale_axis = np.exp(-1j * 2 * np.pi * S**2 / N)
+        phase_mod = phase_mod * phase_mod_axis
+        scale = scale * scale_axis
+
+    K = scale * phase_mod * fft2(X * phase_mod, axes=axes, norm="ortho", workers=workers)
+    return K
+
+
+def ifftmod2(K, axes=(-2, -1), workers=-1):
+    r"""2d iFFT replacing fftshift/ifftshift with phase modulations.
+
+    Parameters
+    ----------
+    K : array_like
+        Input K space data, can be complex.
+    axes : int, default (-2, -1)
+        Axes over which to compute the iFFT. If not given, the last two axes are used.
+    workers : int, default -1
+        Maximum number of workers to use for parallel computation.
+
+    Returns
+    -------
+    X : array_like
+        Original data.
+    """
+    phase_mod = 1
+    scale = 1
+    for axis in axes:
+        N = K.shape[axis]
+        S = N // 2
+        mod_shape = [1] * K.ndim
+        mod_shape[axis] = N
+        phase_mod_axis = np.exp(-1j * 2 * np.pi * np.arange(N) * S / N).reshape(mod_shape)
+        scale_axis = np.exp(1j * 2 * np.pi * S**2 / N)
+        phase_mod = phase_mod * phase_mod_axis
+        scale = scale * scale_axis
+
+    X = scale * phase_mod * ifft2(K * phase_mod, axes=axes, norm="ortho", workers=workers)
+    return X
+
+
+def fftmod3(X, axes=(-3, -2, -1), workers=-1):
+    r"""3d FFT replacing fftshift/ifftshift with phase modulations.
+
+    Parameters
+    ----------
+    X : array_like
+        Input array, can be complex.
+    axes : int, default (-3, -2, -1)
+        Axes over which to compute the FFT. If not given, the last three axes are used.
+    workers : int, default -1
+        Maximum number of workers to use for parallel computation.
+
+    Returns
+    -------
+    K : array_like
+        K-space data.
+    """
+    return fftmodn(X, axes=axes, workers=workers)
+
+
+def ifftmod3(K, axes=(-3, -2, -1), workers=-1):
+    r"""3d iFFT replacing fftshift/ifftshift with phase modulations.
+
+    Parameters
+    ----------
+    K : array_like
+        Input K space data, can be complex.
+    axes : int, default (-3, -2, -1)
+        Axes over which to compute the iFFT. If not given, the last three axes are used.
+    workers : int, default -1
+        Maximum number of workers to use for parallel computation.
+
+    Returns
+    -------
+    X : array_like
+        Original data.
+    """
+    return ifftmodn(K, axes=axes, workers=workers)
+
