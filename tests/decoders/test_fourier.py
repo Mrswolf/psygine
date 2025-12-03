@@ -1,10 +1,7 @@
-import numpy as np
-from psygine.decoders.utils.fourier import (
-    zcrop, fft1c, ifft1c, fftnc, ifftnc,
-    fftmod1, ifftmod1, fftmod2, ifftmod2,
-    fftmod3, ifftmod3, fftmodn, ifftmodn
-)
 import pytest
+import numpy as np
+from psygine.decoders.utils.fourier import *
+
 
 def test_zcrop():
     # Test 1D arrays
@@ -49,31 +46,10 @@ def test_zcrop():
     Y = zcrop(A_3D, (3, 1, 2))
     assert np.array_equal(Y.flatten(order="A"), np.array([5, 6, 17, 18, 0, 0]))
 
-@pytest.mark.parametrize("size", [1, 127, 128])
-def test_fft1c_mod(size):
-    """
-    Tests fftmod1 with complex 1D signals of both even and odd lengths.
-    """
-    np.random.seed(42) 
-    real_part = np.random.randn(size)
-    imag_part = np.random.randn(size)
-    input_data = real_part + 1j * imag_part
 
-    expected = fft1c(input_data)
-    actual = fftmod1(input_data)
-
-    assert np.allclose(actual, expected, rtol=1e-5, atol=1e-8), (
-        f"FFT mismatch failed for size {size} (Type: {'Even' if size % 2 == 0 else 'Odd'})"
-    )
-    
-    expected = ifft1c(input_data)
-    actual = ifftmod1(input_data)
-
-    assert np.allclose(actual, expected, rtol=1e-5, atol=1e-8), (
-        f"iFFT mismatch failed for size {size} (Type: {'Even' if size % 2 == 0 else 'Odd'})"
-    )
-
-@pytest.mark.parametrize("shape", [(128,), (127,), (64, 64), (63, 63), (32, 33, 34)])
+@pytest.mark.parametrize(
+    "shape", [(1,), (127,), (128,), (63, 64), (32, 33, 34), (31, 32, 33, 34)]
+)
 def test_fft_mods(shape):
     """
     Tests fftmodn with complex nD signals of both even and odd lengths.
@@ -83,47 +59,60 @@ def test_fft_mods(shape):
 
     axes = tuple(range(len(shape)))
 
-    # Test fftmodn vs fftnc
-    expected_fft = fftnc(input_data, axes=axes)
-    actual_fft = fftmodn(input_data, axes=axes)
-    assert np.allclose(actual_fft, expected_fft, rtol=1e-5, atol=1e-8), (
-        f"FFT mismatch failed for shape {shape}"
-    )
-
-    # Test ifftmodn vs ifftnc
-    expected_ifft = ifftnc(input_data, axes=axes)
-    actual_ifft = ifftmodn(input_data, axes=axes)
-    assert np.allclose(actual_ifft, expected_ifft, rtol=1e-5, atol=1e-8), (
-        f"iFFT mismatch failed for shape {shape}"
-    )
-
     # Test specific dimension functions
-    if len(shape) == 2:
-        # Test fftmod2 vs fftnc
-        expected_fft2 = fftnc(input_data, axes=(-2,-1))
+    if len(shape) == 1:
+        # Test fftmod1 vs fft1c
+        expected_fft1 = fft1c(input_data)
+        actual_fft1 = fftmod1(input_data)
+        assert np.allclose(
+            actual_fft1, expected_fft1, rtol=1e-5, atol=1e-8
+        ), f"FFT1 mismatch failed for shape {shape}"
+
+        # Test ifftmod1 vs ifft1c
+        expected_ifft1 = ifft1c(input_data)
+        actual_ifft1 = ifftmod1(input_data)
+        assert np.allclose(
+            actual_ifft1, expected_ifft1, rtol=1e-5, atol=1e-8
+        ), f"iFFT1 mismatch failed for shape {shape}"
+    elif len(shape) == 2:
+        # Test fftmod2 vs fft2c
+        expected_fft2 = fft2c(input_data, axes=(-2, -1))
         actual_fft2 = fftmod2(input_data)
-        assert np.allclose(actual_fft2, expected_fft2, rtol=1e-5, atol=1e-8), (
-            f"FFT2 mismatch failed for shape {shape}"
-        )
-        
-        # Test ifftmod2 vs ifftnc
-        expected_ifft2 = ifftnc(input_data, axes=(-2,-1))
+        assert np.allclose(
+            actual_fft2, expected_fft2, rtol=1e-5, atol=1e-8
+        ), f"FFT2 mismatch failed for shape {shape}"
+
+        # Test ifftmod2 vs ifft2c
+        expected_ifft2 = ifft2c(input_data, axes=(-2, -1))
         actual_ifft2 = ifftmod2(input_data)
-        assert np.allclose(actual_ifft2, expected_ifft2, rtol=1e-5, atol=1e-8), (
-            f"iFFT2 mismatch failed for shape {shape}"
-        )
-
-    if len(shape) == 3:
-        # Test fftmod3 vs fftnc
-        expected_fft3 = fftnc(input_data, axes=(-3,-2,-1))
+        assert np.allclose(
+            actual_ifft2, expected_ifft2, rtol=1e-5, atol=1e-8
+        ), f"iFFT2 mismatch failed for shape {shape}"
+    elif len(shape) == 3:
+        # Test fftmod3 vs fft3c
+        expected_fft3 = fft3c(input_data, axes=(-3, -2, -1))
         actual_fft3 = fftmod3(input_data)
-        assert np.allclose(actual_fft3, expected_fft3, rtol=1e-5, atol=1e-8), (
-            f"FFT3 mismatch failed for shape {shape}"
-        )
+        assert np.allclose(
+            actual_fft3, expected_fft3, rtol=1e-5, atol=1e-8
+        ), f"FFT3 mismatch failed for shape {shape}"
 
-        # Test ifftmod3 vs ifftnc
-        expected_ifft3 = ifftnc(input_data, axes=(-3,-2,-1))
+        # Test ifftmod3 vs ifft3c
+        expected_ifft3 = ifftnc(input_data, axes=(-3, -2, -1))
         actual_ifft3 = ifftmod3(input_data)
-        assert np.allclose(actual_ifft3, expected_ifft3, rtol=1e-5, atol=1e-8), (
-            f"iFFT3 mismatch failed for shape {shape}"
-        )
+        assert np.allclose(
+            actual_ifft3, expected_ifft3, rtol=1e-5, atol=1e-8
+        ), f"iFFT3 mismatch failed for shape {shape}"
+    else:
+        # Test fftmodn vs fftnc
+        expected_fft = fftnc(input_data, axes=axes)
+        actual_fft = fftmodn(input_data, axes=axes)
+        assert np.allclose(
+            actual_fft, expected_fft, rtol=1e-5, atol=1e-8
+        ), f"FFT mismatch failed for shape {shape}"
+
+        # Test ifftmodn vs ifftnc
+        expected_ifft = ifftnc(input_data, axes=axes)
+        actual_ifft = ifftmodn(input_data, axes=axes)
+        assert np.allclose(
+            actual_ifft, expected_ifft, rtol=1e-5, atol=1e-8
+        ), f"iFFT mismatch failed for shape {shape}"

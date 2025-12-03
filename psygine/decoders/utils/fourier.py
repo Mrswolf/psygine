@@ -2,11 +2,7 @@
 # Authors: swolf <swolfforever@gmail.com>
 # Date: 2022/11/11
 # License: MIT License
-"""Basic methods related with fourier transform.
-"""
-import numpy as np
-from scipy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
-
+"""Basic methods related with fourier transform."""
 __all__ = [
     "fft1c",
     "ifft1c",
@@ -28,6 +24,10 @@ __all__ = [
 ]
 
 
+import numpy as np
+from scipy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
+
+
 def fft1c(X, axis=-1, workers=-1):
     r"""1d FFT.
 
@@ -44,7 +44,8 @@ def fft1c(X, axis=-1, workers=-1):
         K-space data.
     """
     K = fftshift(
-        fft(ifftshift(X, axes=axis), axis=axis, norm="ortho", workers=workers), axes=axis
+        fft(ifftshift(X, axes=axis), axis=axis, norm="ortho", workers=workers),
+        axes=axis,
     )
     return K
 
@@ -172,7 +173,10 @@ def fftnc(X, axes=None, workers=-1):
     K : array_like
         K-space data.
     """
-    K = fftshift(fftn(ifftshift(X, axes=axes), axes=axes, norm="ortho", workers=workers), axes=axes)
+    K = fftshift(
+        fftn(ifftshift(X, axes=axes), axes=axes, norm="ortho", workers=workers),
+        axes=axes,
+    )
     return K
 
 
@@ -189,7 +193,10 @@ def ifftnc(K, axes=None, workers=-1):
     X : array_like
         Original data.
     """
-    X = fftshift(ifftn(ifftshift(K, axes=axes), axes=axes, norm="ortho", workers=workers), axes=axes)
+    X = fftshift(
+        ifftn(ifftshift(K, axes=axes), axes=axes, norm="ortho", workers=workers),
+        axes=axes,
+    )
     return X
 
 
@@ -248,8 +255,8 @@ def fftmod1(X, axis=-1, workers=-1):
     S = N // 2
     mod_shape = [1 for _ in range(X.ndim)]
     mod_shape[axis] = N
-    phase_mod = np.exp(1j*2*np.pi*np.arange(N) * S / N).reshape(mod_shape)
-    scale = np.exp(-1j*2*np.pi * S**2 / N)
+    phase_mod = np.exp(1j * 2 * np.pi * np.arange(N) * S / N).reshape(mod_shape)
+    scale = np.exp(-1j * 2 * np.pi * S**2 / N)
 
     K = scale * phase_mod * fft(X * phase_mod, axis=axis, norm="ortho", workers=workers)
     return K
@@ -274,82 +281,14 @@ def ifftmod1(K, axis=-1, workers=-1):
     S = N // 2
     mod_shape = [1 for _ in range(K.ndim)]
     mod_shape[axis] = N
-    phase_mod = np.exp(-1j*2*np.pi*np.arange(N) * S / N).reshape(mod_shape)
-    scale = np.exp(1j*2*np.pi * S**2 / N)
+    phase_mod = np.exp(-1j * 2 * np.pi * np.arange(N) * S / N).reshape(mod_shape)
+    scale = np.exp(1j * 2 * np.pi * S**2 / N)
 
-    X = scale * phase_mod * ifft(K * phase_mod, axis=axis, norm="ortho", workers=workers)
-    return X
-
-
-def fftmodn(X, axes=None, workers=-1):
-    r"""Nd FFT replacing fftshift/ifftshift with phase modulations.
-
-    Parameters
-    ----------
-    X : array_like
-        Input array, can be complex.
-    axes : tuple of int, optional
-        Axes over which to compute the FFT. If not given, all axes are used.
-    workers : int, default -1
-        Maximum number of workers to use for parallel computation.
-
-    Returns
-    -------
-    K : array_like
-        K-space data.
-    """
-    if axes is None:
-        axes = tuple(range(X.ndim))
-
-    phase_mod = 1
-    scale = 1
-    for axis in axes:
-        N = X.shape[axis]
-        S = N // 2
-        mod_shape = [1] * X.ndim
-        mod_shape[axis] = N
-        phase_mod_axis = np.exp(1j * 2 * np.pi * np.arange(N) * S / N).reshape(mod_shape)
-        scale_axis = np.exp(-1j * 2 * np.pi * S**2 / N)
-        phase_mod = phase_mod * phase_mod_axis
-        scale = scale * scale_axis
-
-    K = scale * phase_mod * fftn(X * phase_mod, axes=axes, norm="ortho", workers=workers)
-    return K
-
-
-def ifftmodn(K, axes=None, workers=-1):
-    r"""Nd iFFT replacing fftshift/ifftshift with phase modulations.
-
-    Parameters
-    ----------
-    K : array_like
-        Input K space data, can be complex.
-    axes : tuple of int, optional
-        Axes over which to compute the iFFT. If not given, all axes are used.
-    workers : int, default -1
-        Maximum number of workers to use for parallel computation.
-
-    Returns
-    -------
-    X : array_like
-        Original data.
-    """
-    if axes is None:
-        axes = tuple(range(K.ndim))
-
-    phase_mod = 1
-    scale = 1
-    for axis in axes:
-        N = K.shape[axis]
-        S = N // 2
-        mod_shape = [1] * K.ndim
-        mod_shape[axis] = N
-        phase_mod_axis = np.exp(-1j * 2 * np.pi * np.arange(N) * S / N).reshape(mod_shape)
-        scale_axis = np.exp(1j * 2 * np.pi * S**2 / N)
-        phase_mod = phase_mod * phase_mod_axis
-        scale = scale * scale_axis
-
-    X = scale * phase_mod * ifftn(K * phase_mod, axes=axes, norm="ortho", workers=workers)
+    X = (
+        scale
+        * phase_mod
+        * ifft(K * phase_mod, axis=axis, norm="ortho", workers=workers)
+    )
     return X
 
 
@@ -377,12 +316,18 @@ def fftmod2(X, axes=(-2, -1), workers=-1):
         S = N // 2
         mod_shape = [1] * X.ndim
         mod_shape[axis] = N
-        phase_mod_axis = np.exp(1j * 2 * np.pi * np.arange(N) * S / N).reshape(mod_shape)
+        phase_mod_axis = np.exp(1j * 2 * np.pi * np.arange(N) * S / N).reshape(
+            mod_shape
+        )
         scale_axis = np.exp(-1j * 2 * np.pi * S**2 / N)
         phase_mod = phase_mod * phase_mod_axis
         scale = scale * scale_axis
 
-    K = scale * phase_mod * fft2(X * phase_mod, axes=axes, norm="ortho", workers=workers)
+    K = (
+        scale
+        * phase_mod
+        * fft2(X * phase_mod, axes=axes, norm="ortho", workers=workers)
+    )
     return K
 
 
@@ -410,12 +355,18 @@ def ifftmod2(K, axes=(-2, -1), workers=-1):
         S = N // 2
         mod_shape = [1] * K.ndim
         mod_shape[axis] = N
-        phase_mod_axis = np.exp(-1j * 2 * np.pi * np.arange(N) * S / N).reshape(mod_shape)
+        phase_mod_axis = np.exp(-1j * 2 * np.pi * np.arange(N) * S / N).reshape(
+            mod_shape
+        )
         scale_axis = np.exp(1j * 2 * np.pi * S**2 / N)
         phase_mod = phase_mod * phase_mod_axis
         scale = scale * scale_axis
 
-    X = scale * phase_mod * ifft2(K * phase_mod, axes=axes, norm="ortho", workers=workers)
+    X = (
+        scale
+        * phase_mod
+        * ifft2(K * phase_mod, axes=axes, norm="ortho", workers=workers)
+    )
     return X
 
 
@@ -458,3 +409,86 @@ def ifftmod3(K, axes=(-3, -2, -1), workers=-1):
     """
     return ifftmodn(K, axes=axes, workers=workers)
 
+
+def fftmodn(X, axes=None, workers=-1):
+    r"""Nd FFT replacing fftshift/ifftshift with phase modulations.
+
+    Parameters
+    ----------
+    X : array_like
+        Input array, can be complex.
+    axes : tuple of int, optional
+        Axes over which to compute the FFT. If not given, all axes are used.
+    workers : int, default -1
+        Maximum number of workers to use for parallel computation.
+
+    Returns
+    -------
+    K : array_like
+        K-space data.
+    """
+    if axes is None:
+        axes = tuple(range(X.ndim))
+
+    phase_mod = 1
+    scale = 1
+    for axis in axes:
+        N = X.shape[axis]
+        S = N // 2
+        mod_shape = [1] * X.ndim
+        mod_shape[axis] = N
+        phase_mod_axis = np.exp(1j * 2 * np.pi * np.arange(N) * S / N).reshape(
+            mod_shape
+        )
+        scale_axis = np.exp(-1j * 2 * np.pi * S**2 / N)
+        phase_mod = phase_mod * phase_mod_axis
+        scale = scale * scale_axis
+
+    K = (
+        scale
+        * phase_mod
+        * fftn(X * phase_mod, axes=axes, norm="ortho", workers=workers)
+    )
+    return K
+
+
+def ifftmodn(K, axes=None, workers=-1):
+    r"""Nd iFFT replacing fftshift/ifftshift with phase modulations.
+
+    Parameters
+    ----------
+    K : array_like
+        Input K space data, can be complex.
+    axes : tuple of int, optional
+        Axes over which to compute the iFFT. If not given, all axes are used.
+    workers : int, default -1
+        Maximum number of workers to use for parallel computation.
+
+    Returns
+    -------
+    X : array_like
+        Original data.
+    """
+    if axes is None:
+        axes = tuple(range(K.ndim))
+
+    phase_mod = 1
+    scale = 1
+    for axis in axes:
+        N = K.shape[axis]
+        S = N // 2
+        mod_shape = [1] * K.ndim
+        mod_shape[axis] = N
+        phase_mod_axis = np.exp(-1j * 2 * np.pi * np.arange(N) * S / N).reshape(
+            mod_shape
+        )
+        scale_axis = np.exp(1j * 2 * np.pi * S**2 / N)
+        phase_mod = phase_mod * phase_mod_axis
+        scale = scale * scale_axis
+
+    X = (
+        scale
+        * phase_mod
+        * ifftn(K * phase_mod, axes=axes, norm="ortho", workers=workers)
+    )
+    return X
