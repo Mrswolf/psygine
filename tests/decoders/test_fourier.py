@@ -104,15 +104,15 @@ def test_fft_mods(shape):
         ), f"iFFT3 mismatch failed for shape {shape}"
     else:
         # Test fftmodn vs fftnc
-        expected_fft = fftnc(input_data, axes=axes)
-        actual_fft = fftmodn(input_data, axes=axes)
+        expected_fft = fftnc(input_data, axes=(0, 2))
+        actual_fft = fftmodn(input_data, axes=(0, 2))
         assert np.allclose(
             actual_fft, expected_fft, rtol=1e-5, atol=1e-8
         ), f"FFT mismatch failed for shape {shape}"
 
         # Test ifftmodn vs ifftnc
-        expected_ifft = ifftnc(input_data, axes=axes)
-        actual_ifft = ifftmodn(input_data, axes=axes)
+        expected_ifft = ifftnc(input_data, axes=(0, 2))
+        actual_ifft = ifftmodn(input_data, axes=(0, 2))
         assert np.allclose(
             actual_ifft, expected_ifft, rtol=1e-5, atol=1e-8
         ), f"iFFT mismatch failed for shape {shape}"
