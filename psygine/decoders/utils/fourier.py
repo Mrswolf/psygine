@@ -4,6 +4,7 @@
 # License: MIT License
 """Basic methods related with fourier transform."""
 __all__ = [
+    "zcrop",
     "fft1c",
     "ifft1c",
     "fft2c",
@@ -12,13 +13,14 @@ __all__ = [
     "ifft3c",
     "fftnc",
     "ifftnc",
-    "zcrop",
-    "ifftmod1",
-    "fftmod1",
-    "fftmod2",
-    "ifftmod2",
-    "fftmod3",
-    "ifftmod3",
+    "fft1c_mod",
+    "ifft1c_mod",
+    "fft2c_mod",
+    "ifft2c_mod",
+    "fft3c_mod",
+    "ifft3c_mod",
+    "fftnc_mod",
+    "ifftnc_mod",
     "fftmodn",
     "ifftmodn",
 ]
@@ -29,174 +31,177 @@ from scipy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 
 
 def fft1c(X, axis=-1, workers=-1):
-    r"""1d FFT.
+    """1d centered FFT.
 
     Parameters
     ----------
-    X : array_like
+    X : numpy.ndarray
         Input array, can be complex.
-    axis : int, default -1
-        Axis over which to compute the FFT. If not given, the last axis is used.
-
+    axis : int, optional
+        Axis over which to compute the FFT. Defaults to -1 (the last axis).
+    workers : int, optional
+        Number of workers to use for parallel computation. Defaults to -1 (all available CPUs).
     Returns
     -------
     K : array_like
         K-space data.
     """
-    K = fftshift(
-        fft(ifftshift(X, axes=axis), axis=axis, norm="ortho", workers=workers),
-        axes=axis,
-    )
+    K = ifftshift(X, axes=axis)
+    K = fft(K, axis=axis, norm="ortho", workers=workers)
+    K = fftshift(K, axes=axis)
     return K
 
 
 def ifft1c(K, axis=-1, workers=-1):
-    r"""1d iFFT.
+    """1d centered iFFT.
 
     Parameters
     ----------
-    K : array_like
-        Input K space data, can be complex.
-    axis : int, default -1
-        Axis over which to compute the iFFT. If not given, the last axis is used.
-
+    K : numpy.ndarray
+        Input K-space data, can be complex.
+    axis : int, optional
+        Axis over which to compute the iFFT. Defaults to -1 (the last axis).
+    workers : int, optional
+        Number of workers to use for parallel computation. Defaults to -1 (all available CPUs).
     Returns
     -------
     X : array_like
         Original data.
     """
-    X = fftshift(
-        ifft(ifftshift(K, axes=axis), axis=axis, norm="ortho", workers=workers),
-        axes=axis,
-    )
+    X = ifftshift(K, axes=axis)
+    X = ifft(X, axis=axis, norm="ortho", workers=workers)
+    X = fftshift(X, axes=axis)
     return X
 
 
 def fft2c(X, axes=(-2, -1), workers=-1):
-    r"""2d FFT.
+    """2d centered FFT.
 
     Parameters
     ----------
-    X : array_like
+    X : numpy.ndarray
         Input array, can be complex.
-    axes : int, default (-2, -1)
-        Axes over which to compute the FFT. If not given, the last two axes are used.
-
+    axes : tuple of int, optional
+        Axes over which to compute the FFT. Defaults to (-2, -1) (the last two axes).
+    workers : int, optional
+        Number of workers to use for parallel computation. Defaults to -1 (all available CPUs).
     Returns
     -------
     K : array_like
         K-space data.
     """
-    K = fftshift(
-        fft2(ifftshift(X, axes=axes), axes=axes, norm="ortho", workers=workers),
-        axes=axes,
-    )
+    K = ifftshift(X, axes=axes)
+    K = fft2(K, axes=axes, norm="ortho", workers=workers)
+    K = fftshift(K, axes=axes)
     return K
 
 
 def ifft2c(K, axes=(-2, -1), workers=-1):
-    r"""2d iFFT.
+    """2d centered iFFT.
 
     Parameters
     ----------
-    K : array_like
-        Input K space data, can be complex.
-    axes : int, default (-2, -1)
-        Axes over which to compute the iFFT. If not given, the last two axes are used.
-
+    K : numpy.ndarray
+        Input K-space data, can be complex.
+    axes : tuple of int, optional
+        Axes over which to compute the iFFT. Defaults to (-2, -1) (the last two axes).
+    workers : int, optional
+        Number of workers to use for parallel computation. Defaults to -1 (all available CPUs).
     Returns
     -------
     X : array_like
         Original data.
     """
-    X = fftshift(
-        ifft2(ifftshift(K, axes=axes), axes=axes, norm="ortho", workers=workers),
-        axes=axes,
-    )
+    X = ifftshift(K, axes=axes)
+    X = ifft2(X, axes=axes, norm="ortho", workers=workers)
+    X = fftshift(X, axes=axes)
     return X
 
 
 def fft3c(X, axes=(-3, -2, -1), workers=-1):
-    r"""3d FFT.
+    """3d centered FFT.
 
     Parameters
     ----------
-    X : array_like
+    X : numpy.ndarray
         Input array, can be complex.
-    axes : int, default (-3, -2, -1)
-        Axes over which to compute the FFT. If not given, the last three axes are used.
-
+    axes : tuple of int, optional
+        Axes over which to compute the FFT. Defaults to (-3, -2, -1) (the last three axes).
+    workers : int, optional
+        Number of workers to use for parallel computation. Defaults to -1 (all available CPUs).
     Returns
     -------
     K : array_like
         K-space data.
     """
-    K = fftshift(
-        fftn(ifftshift(X, axes=axes), axes=axes, norm="ortho", workers=workers),
-        axes=axes,
-    )
+    K = ifftshift(X, axes=axes)
+    K = fftn(K, axes=axes, norm="ortho", workers=workers)
+    K = fftshift(K, axes=axes)
     return K
 
 
 def ifft3c(K, axes=(-3, -2, -1), workers=-1):
-    r"""3d iFFT.
+    """3d centered iFFT.
 
     Parameters
     ----------
-    K : array_like
-        Input K space data, can be complex.
-    axes : int, default (-3, -2, -1)
-        Axes over which to compute the iFFT. If not given, the last three axes are used.
-
+    K : numpy.ndarray
+        Input K-space data, can be complex.
+    axes : tuple of int, optional
+        Axes over which to compute the iFFT. Defaults to (-3, -2, -1) (the last three axes).
+    workers : int, optional
+        Number of workers to use for parallel computation. Defaults to -1 (all available CPUs).
     Returns
     -------
     X : array_like
         Original data.
     """
-    X = fftshift(
-        ifftn(ifftshift(K, axes=axes), axes=axes, norm="ortho", workers=workers),
-        axes=axes,
-    )
+    X = ifftshift(K, axes=axes)
+    X = ifftn(X, axes=axes, norm="ortho", workers=workers)
+    X = fftshift(X, axes=axes)
     return X
 
 
 def fftnc(X, axes=None, workers=-1):
-    r"""Nd FFT.
+    """Nd centered FFT.
 
     Parameters
     ----------
-    X : array_like
+    X : numpy.ndarray
         Input array, can be complex.
+    axes : tuple of int, optional
+        Axes over which to compute the FFT. If not given, all axes are used.
 
     Returns
     -------
     K : array_like
         K-space data.
     """
-    K = fftshift(
-        fftn(ifftshift(X, axes=axes), axes=axes, norm="ortho", workers=workers),
-        axes=axes,
-    )
+    K = ifftshift(X, axes=axes)
+    K = fftn(K, axes=axes, norm="ortho", workers=workers)
+    K = fftshift(K, axes=axes)
+
     return K
 
 
 def ifftnc(K, axes=None, workers=-1):
-    r"""Nd iFFT.
+    """Nd centered iFFT.
 
     Parameters
     ----------
-    K : array_like
-        Input K space data, can be complex.
+    K : numpy.ndarray
+        Input K-space data, can be complex.
+    axes : tuple of int, optional
+        Axes over which to compute the iFFT. If not given, all axes are used.
 
     Returns
     -------
     X : array_like
         Original data.
     """
-    X = fftshift(
-        ifftn(ifftshift(K, axes=axes), axes=axes, norm="ortho", workers=workers),
-        axes=axes,
-    )
+    X = ifftshift(K, axes=axes)
+    X = ifftn(X, axes=axes, norm="ortho", workers=workers)
+    X = fftshift(X, axes=axes)
     return X
 
 
@@ -207,7 +212,7 @@ def zcrop(X, shape):
 
     Parameters
     ----------
-    X : array_like
+    X : numpy.ndarray
         Input array.
     shape : tuple of int
         Desired shape for output.
@@ -236,259 +241,303 @@ def zcrop(X, shape):
     return X_dest
 
 
-def fftmod1(X, axis=-1, workers=-1):
-    r"""1d FFT replacing fftshift/ifftshift with phase modulations.
+def fftmodn(X, axes=None):
+    """Calculate the phase modulation array for centered FFT.
+
+    This function computes the phase modulation array that can be used to replace
+    `fftshift` and `ifftshift` operations for centered FFTs.
 
     Parameters
     ----------
-    X : array_like
-        Input array, can be complex.
-    axis : int, default -1
-        Axis over which to compute the FFT. If not given, the last axis is used.
-
-    Returns
-    -------
-    K : array_like
-        K-space data.
-    """
-    N = X.shape[axis]
-    S = N // 2
-    mod_shape = [1 for _ in range(X.ndim)]
-    mod_shape[axis] = N
-    phase_mod = np.exp(1j * 2 * np.pi * np.arange(N) * S / N).reshape(mod_shape)
-    scale = np.exp(-1j * 2 * np.pi * S**2 / N)
-
-    K = scale * phase_mod * fft(X * phase_mod, axis=axis, norm="ortho", workers=workers)
-    return K
-
-
-def ifftmod1(K, axis=-1, workers=-1):
-    r"""1d iFFT replacing fftshift/ifftshift with phase modulations.
-
-    Parameters
-    ----------
-    K : array_like
-        Input K space data, can be complex.
-    axis : int, default -1
-        Axis over which to compute the iFFT. If not given, the last axis is used.
-
-    Returns
-    -------
-    X : array_like
-        Original data.
-    """
-    N = K.shape[axis]
-    S = N // 2
-    mod_shape = [1 for _ in range(K.ndim)]
-    mod_shape[axis] = N
-    phase_mod = np.exp(-1j * 2 * np.pi * np.arange(N) * S / N).reshape(mod_shape)
-    scale = np.exp(1j * 2 * np.pi * S**2 / N)
-
-    X = (
-        scale
-        * phase_mod
-        * ifft(K * phase_mod, axis=axis, norm="ortho", workers=workers)
-    )
-    return X
-
-
-def fftmod2(X, axes=(-2, -1), workers=-1):
-    r"""2d FFT replacing fftshift/ifftshift with phase modulations.
-
-    Parameters
-    ----------
-    X : array_like
-        Input array, can be complex.
-    axes : int, default (-2, -1)
-        Axes over which to compute the FFT. If not given, the last two axes are used.
-    workers : int, default -1
-        Maximum number of workers to use for parallel computation.
-
-    Returns
-    -------
-    K : array_like
-        K-space data.
-    """
-    phase_mod = 1
-    scale = 1
-    for axis in axes:
-        N = X.shape[axis]
-        S = N // 2
-        mod_shape = [1] * X.ndim
-        mod_shape[axis] = N
-        phase_mod_axis = np.exp(1j * 2 * np.pi * np.arange(N) * S / N).reshape(
-            mod_shape
-        )
-        scale_axis = np.exp(-1j * 2 * np.pi * S**2 / N)
-        phase_mod = phase_mod * phase_mod_axis
-        scale = scale * scale_axis
-
-    K = (
-        scale
-        * phase_mod
-        * fft2(X * phase_mod, axes=axes, norm="ortho", workers=workers)
-    )
-    return K
-
-
-def ifftmod2(K, axes=(-2, -1), workers=-1):
-    r"""2d iFFT replacing fftshift/ifftshift with phase modulations.
-
-    Parameters
-    ----------
-    K : array_like
-        Input K space data, can be complex.
-    axes : int, default (-2, -1)
-        Axes over which to compute the iFFT. If not given, the last two axes are used.
-    workers : int, default -1
-        Maximum number of workers to use for parallel computation.
-
-    Returns
-    -------
-    X : array_like
-        Original data.
-    """
-    phase_mod = 1
-    scale = 1
-    for axis in axes:
-        N = K.shape[axis]
-        S = N // 2
-        mod_shape = [1] * K.ndim
-        mod_shape[axis] = N
-        phase_mod_axis = np.exp(-1j * 2 * np.pi * np.arange(N) * S / N).reshape(
-            mod_shape
-        )
-        scale_axis = np.exp(1j * 2 * np.pi * S**2 / N)
-        phase_mod = phase_mod * phase_mod_axis
-        scale = scale * scale_axis
-
-    X = (
-        scale
-        * phase_mod
-        * ifft2(K * phase_mod, axes=axes, norm="ortho", workers=workers)
-    )
-    return X
-
-
-def fftmod3(X, axes=(-3, -2, -1), workers=-1):
-    r"""3d FFT replacing fftshift/ifftshift with phase modulations.
-
-    Parameters
-    ----------
-    X : array_like
-        Input array, can be complex.
-    axes : int, default (-3, -2, -1)
-        Axes over which to compute the FFT. If not given, the last three axes are used.
-    workers : int, default -1
-        Maximum number of workers to use for parallel computation.
-
-    Returns
-    -------
-    K : array_like
-        K-space data.
-    """
-    return fftmodn(X, axes=axes, workers=workers)
-
-
-def ifftmod3(K, axes=(-3, -2, -1), workers=-1):
-    r"""3d iFFT replacing fftshift/ifftshift with phase modulations.
-
-    Parameters
-    ----------
-    K : array_like
-        Input K space data, can be complex.
-    axes : int, default (-3, -2, -1)
-        Axes over which to compute the iFFT. If not given, the last three axes are used.
-    workers : int, default -1
-        Maximum number of workers to use for parallel computation.
-
-    Returns
-    -------
-    X : array_like
-        Original data.
-    """
-    return ifftmodn(K, axes=axes, workers=workers)
-
-
-def fftmodn(X, axes=None, workers=-1):
-    r"""Nd FFT replacing fftshift/ifftshift with phase modulations.
-
-    Parameters
-    ----------
-    X : array_like
-        Input array, can be complex.
+    X : numpy.ndarray
+        Input array, can be complex. Its shape is used to determine the modulation.
     axes : tuple of int, optional
         Axes over which to compute the FFT. If not given, all axes are used.
-    workers : int, default -1
-        Maximum number of workers to use for parallel computation.
 
     Returns
     -------
-    K : array_like
-        K-space data.
+    phase_mod : array_like
+        phase modulation array.
     """
     if axes is None:
         axes = tuple(range(X.ndim))
-
+    dtype = np.result_type(X.dtype, np.complex64)
     phase_mod = 1
-    scale = 1
     for axis in axes:
         N = X.shape[axis]
         S = N // 2
         mod_shape = [1] * X.ndim
         mod_shape[axis] = N
-        phase_mod_axis = np.exp(1j * 2 * np.pi * np.arange(N) * S / N).reshape(
-            mod_shape
+        phase_mod_axis = (
+            np.exp(1j * 2 * np.pi * (np.arange(N) - S / 2) * S / N)
+            .astype(dtype)
+            .reshape(mod_shape)
         )
-        scale_axis = np.exp(-1j * 2 * np.pi * S**2 / N)
-        phase_mod = phase_mod * phase_mod_axis
-        scale = scale * scale_axis
+        phase_mod = (
+            phase_mod * phase_mod_axis
+        )  # utilize broadcasting to reduce the number of exps
 
-    K = (
-        scale
-        * phase_mod
-        * fftn(X * phase_mod, axes=axes, norm="ortho", workers=workers)
-    )
-    return K
+    return phase_mod
 
 
-def ifftmodn(K, axes=None, workers=-1):
-    r"""Nd iFFT replacing fftshift/ifftshift with phase modulations.
+def ifftmodn(X, axes=None):
+    """Calculate the inverse phase modulation array for centered iFFT.
+
+    This function computes the inverse phase modulation array that can be used to replace
+    `fftshift` and `ifftshift` operations for centered iFFTs.
 
     Parameters
     ----------
+    X : numpy.ndarray
+        Input array, can be complex. Its shape is used to determine the modulation.
+    axes : tuple of int, optional
+        Axes over which to compute the FFT. If not given, all axes are used.
+
+    Returns
+    -------
+    phase_mod : array_like
+        phase modulation array.
+    """
+    if axes is None:
+        axes = tuple(range(X.ndim))
+    dtype = np.result_type(X.dtype, np.complex64)
+    phase_mod = 1
+    for axis in axes:
+        N = X.shape[axis]
+        S = N // 2
+        mod_shape = [1] * X.ndim
+        mod_shape[axis] = N
+        phase_mod_axis = (
+            np.exp(-1j * 2 * np.pi * (np.arange(N) - S / 2) * S / N)
+            .astype(dtype)
+            .reshape(mod_shape)
+        )
+        phase_mod = (
+            phase_mod * phase_mod_axis
+        )  # utilize broadcasting to reduce the number of exps
+
+    return phase_mod
+
+
+def fftnc_mod(X, axes=None, workers=-1, phase_mod=None):
+    """Nd centered FFT with phase modulation.
+
+    This function performs an N-dimensional centered Fast Fourier Transform
+    using phase modulation instead of `fftshift`/`ifftshift`.
+
+    Parameters
+    ----------
+    X : numpy.ndarray
+        Input array, can be complex.
+    axes : tuple of int, optional
+        Axes over which to compute the FFT. If not given, all axes are used.
+    workers : int, optional
+        Number of workers to use for parallel computation. Defaults to -1 (all available CPUs).
+
+    Returns
+    -------
     K : array_like
-        Input K space data, can be complex.
+        K-space data.
+    """
+    if phase_mod is None:
+        phase_mod = fftmodn(X, axes=axes)
+    K = X * phase_mod
+    K = fftn(K, axes=axes, norm="ortho", workers=workers)
+    K *= phase_mod
+    return K
+
+
+def ifftnc_mod(K, axes=None, workers=-1, phase_mod=None):
+    """Nd centered iFFT with phase modulation.
+
+    This function performs an N-dimensional centered Inverse Fast Fourier Transform
+    using phase modulation instead of `fftshift`/`ifftshift`.
+
+    Parameters
+    ----------
+    K : numpy.ndarray
+        Input K-space data, can be complex.
     axes : tuple of int, optional
         Axes over which to compute the iFFT. If not given, all axes are used.
-    workers : int, default -1
-        Maximum number of workers to use for parallel computation.
+    workers : int, optional
+        Number of workers to use for parallel computation. Defaults to -1 (all available CPUs).
 
     Returns
     -------
     X : array_like
         Original data.
     """
-    if axes is None:
-        axes = tuple(range(K.ndim))
+    if phase_mod is None:
+        phase_mod = ifftmodn(K, axes=axes)
+    X = K * phase_mod
+    X = ifftn(X, axes=axes, norm="ortho", workers=workers)
+    X *= phase_mod
+    return X
 
-    phase_mod = 1
-    scale = 1
-    for axis in axes:
-        N = K.shape[axis]
-        S = N // 2
-        mod_shape = [1] * K.ndim
-        mod_shape[axis] = N
-        phase_mod_axis = np.exp(-1j * 2 * np.pi * np.arange(N) * S / N).reshape(
-            mod_shape
-        )
-        scale_axis = np.exp(1j * 2 * np.pi * S**2 / N)
-        phase_mod = phase_mod * phase_mod_axis
-        scale = scale * scale_axis
 
-    X = (
-        scale
-        * phase_mod
-        * ifftn(K * phase_mod, axes=axes, norm="ortho", workers=workers)
-    )
+def fft1c_mod(X, axis=-1, workers=-1, phase_mod=None):
+    """1d centered FFT with phase modulation.
+
+    This function performs a 1-dimensional centered Fast Fourier Transform
+    using phase modulation instead of `fftshift`/`ifftshift`.
+
+    Parameters
+    ----------
+    X : numpy.ndarray
+        Input array, can be complex.
+    axis : int, optional
+        Axis over which to compute the FFT. Defaults to -1 (the last axis).
+    workers : int, optional
+        Number of workers to use for parallel computation. Defaults to -1 (all available CPUs).
+
+    Returns
+    -------
+    K : array_like
+        K-space data.
+    """
+    if phase_mod is None:
+        phase_mod = fftmodn(X, axes=(axis,))
+    K = X * phase_mod
+    K = fft(K, axis=axis, norm="ortho", workers=workers)
+    K *= phase_mod
+    return K
+
+
+def ifft1c_mod(K, axis=-1, workers=-1, phase_mod=None):
+    """1d centered iFFT with phase modulation.
+
+    This function performs a 1-dimensional centered Inverse Fast Fourier Transform
+    using phase modulation instead of `fftshift`/`ifftshift`.
+
+    Parameters
+    ----------
+    K : numpy.ndarray
+        Input K-space data, can be complex.
+    axis : int, optional
+        Axis over which to compute the iFFT. Defaults to -1 (the last axis).
+    workers : int, optional
+        Number of workers to use for parallel computation. Defaults to -1 (all available CPUs).
+
+    Returns
+    -------
+    X : array_like
+        Original data.
+    """
+    if phase_mod is None:
+        phase_mod = ifftmodn(K, axes=(axis,))
+    X = K * phase_mod
+    X = ifft(X, axis=axis, norm="ortho", workers=workers)
+    X *= phase_mod
+    return X
+
+
+def fft2c_mod(X, axes=(-2, -1), workers=-1, phase_mod=None):
+    """2d centered FFT with phase modulation.
+
+    This function performs a 2-dimensional centered Fast Fourier Transform
+    using phase modulation instead of `fftshift`/`ifftshift`.
+
+    Parameters
+    ----------
+    X : numpy.ndarray
+        Input array, can be complex.
+    axes : tuple of int, optional
+        Axes over which to compute the FFT. Defaults to (-2, -1) (the last two axes).
+    workers : int, optional
+        Number of workers to use for parallel computation. Defaults to -1 (all available CPUs).
+
+    Returns
+    -------
+    K : array_like
+        K-space data.
+    """
+    if phase_mod is None:
+        phase_mod = fftmodn(X, axes=axes)
+    K = X * phase_mod
+    K = fft2(K, axes=axes, norm="ortho", workers=workers)
+    K *= phase_mod
+    return K
+
+
+def ifft2c_mod(K, axes=(-2, -1), workers=-1, phase_mod=None):
+    """2d centered iFFT with phase modulation.
+
+    This function performs a 2-dimensional centered Inverse Fast Fourier Transform
+    using phase modulation instead of `fftshift`/`ifftshift`.
+
+    Parameters
+    ----------
+    K : numpy.ndarray
+        Input K-space data, can be complex.
+    axes : tuple of int, optional
+        Axes over which to compute the iFFT. Defaults to (-2, -1) (the last two axes).
+    workers : int, optional
+        Number of workers to use for parallel computation. Defaults to -1 (all available CPUs).
+
+    Returns
+    -------
+    X : array_like
+        Original data.
+    """
+    if phase_mod is None:
+        phase_mod = ifftmodn(K, axes=axes)
+    X = K * phase_mod
+    X = ifft2(X, axes=axes, norm="ortho", workers=workers)
+    X *= phase_mod
+    return X
+
+
+def fft3c_mod(X, axes=(-3, -2, -1), workers=-1, phase_mod=None):
+    """3d centered FFT with phase modulation.
+
+    This function performs a 3-dimensional centered Fast Fourier Transform
+    using phase modulation instead of `fftshift`/`ifftshift`.
+
+    Parameters
+    ----------
+    X : numpy.ndarray
+        Input array, can be complex.
+    axes : tuple of int, optional
+        Axes over which to compute the FFT. Defaults to (-3, -2, -1) (the last three axes).
+    workers : int, optional
+        Number of workers to use for parallel computation. Defaults to -1 (all available CPUs).
+
+    Returns
+    -------
+    K : array_like
+        K-space data.
+    """
+    if phase_mod is None:
+        phase_mod = fftmodn(X, axes=axes)
+    K = X * phase_mod
+    K = fftn(K, axes=axes, norm="ortho", workers=workers)
+    K *= phase_mod
+    return K
+
+
+def ifft3c_mod(K, axes=(-3, -2, -1), workers=-1, phase_mod=None):
+    """3d centered iFFT with phase modulation.
+
+    This function performs a 3-dimensional centered Inverse Fast Fourier Transform
+    using phase modulation instead of `fftshift`/`ifftshift`.
+
+    Parameters
+    ----------
+    K : numpy.ndarray
+        Input K-space data, can be complex.
+    axes : tuple of int, optional
+        Axes over which to compute the iFFT. Defaults to (-3, -2, -1) (the last three axes).
+    workers : int, optional
+        Number of workers to use for parallel computation. Defaults to -1 (all available CPUs).
+
+    Returns
+    -------
+    X : array_like
+        Original data.
+    """
+    if phase_mod is None:
+        phase_mod = ifftmodn(K, axes=axes)
+    X = K * phase_mod
+    X = ifftn(X, axes=axes, norm="ortho", workers=workers)
+    X *= phase_mod
     return X
